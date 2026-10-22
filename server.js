@@ -73,6 +73,10 @@ const Question = mongoose.model("Question", questionSchema);
 ========================================= */
 
 const resultSchema = new mongoose.Schema({
+    studentName: {
+        type: String,
+        required: true
+    },
     score: {
         type: Number,
         required: true
@@ -326,54 +330,89 @@ app.delete("/api/admin/questions", checkAdmin, async (req, res) => {
 });
 
 
+app.get("/api/admin/results", checkAdmin, async (req, res) => {
+    try {
+        const results = await Result.find()
+            .sort({ createdAt: -1 })
+            .lean();
+
+        res.json(results);
+
+    } catch (error) {
+        console.error("Fetch results error:", error);
+
+        res.status(500).json({
+            message: "Failed to fetch results."
+        });
+    }
+});
+
+// Delete all student results
+app.delete("/api/admin/results", checkAdmin, async (req, res) => {
+
+    try {
+        const result = await Result.deleteMany({});
+
+        res.json({
+            message: "All student results deleted successfully.",
+            deletedCount: result.deletedCount
+        });
+
+    } catch (error) {
+        console.error("Delete results error:", error);
+
+        res.status(500).json({
+            message: "Failed to delete student results."
+        });
+    }
+});
+
 /* =========================================
    8. SAVE QUIZ RESULT
 ========================================= */
 
-app.post("/api/quiz/results", async function (req, res) {
+app.post("/api/quiz/results", async (req, res) => {
     try {
-        const { score, total, percentage, feedback } = req.body || {};
+        const studentName =
+            String(req.body.studentName || "").trim();
+
+        const score = Number(req.body.score);
+        const total = Number(req.body.total);
+        const percentage = Number(req.body.percentage);
 
         if (
-            !Number.isInteger(score) ||
-            !Number.isInteger(total) ||
-            total < 1 ||
-            score < 0 ||
-            score > total ||
-            typeof percentage !== "number" ||
+            !studentName ||
+            !Number.isFinite(score) ||
+            !Number.isFinite(total) ||
             !Number.isFinite(percentage) ||
-            percentage < 0 ||
-            percentage > 100 ||
-            (
-                feedback !== undefined &&
-                !Array.isArray(feedback)
-            )
+            total <= 0 ||
+            score < 0 ||
+            score > total
         ) {
             return res.status(400).json({
-                success: false,
-                message: "Invalid quiz result data."
+                message: "Invalid student result."
             });
         }
 
-        const result = await Result.create({
+        const result = new Result({
+            studentName: studentName,
             score: score,
             total: total,
             percentage: percentage,
-            feedback: feedback || []
+            createdAt: new Date()
         });
 
-        return res.status(201).json({
-            success: true,
-            message: "Result saved successfully.",
-            resultId: result._id
+        await result.save();
+
+        res.status(201).json({
+            message: "Student result saved successfully."
         });
 
     } catch (error) {
-        console.error("Result saving error:", error);
+        console.error("Save result error:", error);
 
-        return res.status(500).json({
-            success: false,
-            message: "Could not save quiz result."
+        res.status(500).json({
+            message: "Failed to save result."
         });
     }
 });

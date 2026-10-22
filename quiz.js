@@ -7,7 +7,7 @@ let score = 0;
 let questionIndex = 0;
 let userAnswers = [];
 let quizStarted = false;
-
+let studentName = "";
 let questions = [];
 let pendingQuestions = [];
 
@@ -261,7 +261,18 @@ function startQuiz() {
             // Continue if fullscreen is unavailable.
         });
     }
+     let nameInput = document.getElementById("studentName");
+    let nameError = document.getElementById("nameError");
 
+    studentName = nameInput.value.trim();
+
+    if (studentName === "") {
+        nameError.innerText = "Please enter your name.";
+        nameInput.focus();
+        return;
+    }
+
+    nameError.innerText = "";
     if (getElement("noQuestions")) {
         getElement("noQuestions").style.display = "none";
     }
@@ -532,6 +543,7 @@ async function completeTest() {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
+                studentName: studentName,
                 score: score,
                 total: total,
                 percentage: percentage
@@ -1120,6 +1132,124 @@ document.addEventListener("contextmenu", function (event) {
 });
 
 
+
+function loadStudentResults() {
+
+    let table = document.getElementById("resultsTable");
+    let message = document.getElementById("resultsMessage");
+
+    table.innerHTML = "";
+    message.innerText = "Loading results...";
+
+    // Use the same admin password key as your existing login code.
+    let adminPassword = sessionStorage.getItem("adminPassword");
+
+    if (!adminPassword) {
+        message.innerText = "Please log in as admin first.";
+        return;
+    }
+
+    fetch("/api/admin/results", {
+        method: "GET",
+        headers: {
+            "x-admin-password": adminPassword
+        }
+    })
+    .then(function (response) {
+        if (!response.ok) {
+            throw new Error("Unable to fetch results. Please log in again.");
+        }
+
+        return response.json();
+    })
+    .then(function (results) {
+
+        message.innerText = "";
+
+        if (results.length === 0) {
+            message.innerText = "No student results available yet.";
+            return;
+        }
+
+        results.forEach(function (result, index) {
+
+            let row = document.createElement("tr");
+
+            let submittedAt = result.createdAt
+                ? new Date(result.createdAt).toLocaleString()
+                : "N/A";
+
+            let values = [
+                index + 1,
+                result.studentName || "Unknown",
+                result.score,
+                result.total,
+                result.percentage + "%",
+                submittedAt
+            ];
+
+            values.forEach(function (value) {
+                let cell = document.createElement("td");
+                cell.textContent = value;
+                row.appendChild(cell);
+            });
+
+            table.appendChild(row);
+        });
+    })
+    .catch(function (error) {
+        message.innerText = error.message;
+    });
+}
+
+function deleteAllResults() {
+
+    let confirmDelete = confirm(
+        "Are you sure you want to delete ALL student results? This cannot be undone."
+    );
+
+    if (!confirmDelete) {
+        return;
+    }
+
+    let adminPassword =
+        sessionStorage.getItem("adminPassword");
+
+    if (!adminPassword) {
+        alert("Please log in as admin first.");
+        return;
+    }
+
+    fetch("/api/admin/results", {
+        method: "DELETE",
+        headers: {
+            "x-admin-password": adminPassword
+        }
+    })
+    .then(function (response) {
+        return response.json().then(function (data) {
+            if (!response.ok) {
+                throw new Error(
+                    data.message || "Failed to delete results."
+                );
+            }
+
+            return data;
+        });
+    })
+    .then(function (data) {
+        alert(
+            data.message +
+            "\nDeleted results: " +
+            data.deletedCount
+        );
+
+        loadStudentResults();
+    })
+    .catch(function (error) {
+        alert(error.message);
+    });
+}
 
 window.adminLogin = adminLogin;
 window.adminLogout = adminLogout;

@@ -19,7 +19,6 @@
         <!-- File Import -->
         <section class="import-card">
             <h2>Import From Text File</h2>
-
             <label for="questionFile">Choose Question File (.txt)</label>
             <input
                 type="file"
@@ -100,7 +99,39 @@
                 </p>
             </div>
         </section>
+       <hr>
 
+<h2>Student Quiz Results</h2>
+
+<button type="button" onclick="loadStudentResults()">
+    View Student Results
+</button>
+
+<p id="resultsMessage"></p>
+<button
+    type="button"
+    onclick="deleteAllResults()"
+    style="background-color: red; color: white;"
+>
+    Delete All Results
+</button>
+<div style="overflow-x: auto;">
+    <table border="1" cellpadding="10" cellspacing="0">
+        <thead>
+            <tr>
+                <th>No.</th>
+                <th>Student Name</th>
+                <th>Score</th>
+                <th>Total Questions</th>
+                <th>Percentage</th>
+                <th>Submitted At</th>
+    
+            </tr>
+        </thead>
+
+        <tbody id="resultsTable"></tbody>
+    </table>
+    </div>
         <div class="import-footer">
             <a href="quiz.html">Go to Quiz</a>
         </div>
