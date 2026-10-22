@@ -262,21 +262,14 @@ function startQuiz() {
         });
     }
      let nameInput = document.getElementById("studentName");
-    let nameError = document.getElementById("nameError");
-
-    studentName = nameInput.value.trim();
+     let nameError = document.getElementById("nameError");
+     studentName = nameInput.value.trim();
 
     if (studentName === "") {
         nameError.innerText = "Please enter your name.";
         nameInput.focus();
         return;
     }
-
-    nameError.innerText = "";
-    if (getElement("noQuestions")) {
-        getElement("noQuestions").style.display = "none";
-    }
-
     getElement("startScreen").style.display = "none";
     getElement("quizScreen").style.display = "block";
     getElement("resultScreen").style.display = "none";
