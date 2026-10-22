@@ -19,6 +19,7 @@
             style="width: 170px; height: 35px; object-fit: contain; display: block;"
             alt="Quiz Logo"
         >
+        
     </header>
   
     
@@ -73,19 +74,30 @@
         <h3 id="feedback"></h3>
 
         <button id="clearBtn" onclick="clearAnswer()" disabled>
-            Clear Answer
+            Clear
         </button>
 
         <button id="submitBtn" onclick="checkAnswer()" disabled>
             Submit Answer
         </button>
+        <button id="previousBtn" onclick="previousQuestion()"style="display: none;">Previous </button>
 
         <button id="nextBtn" onclick="nextQuestion()" style="display: none;">
             Next
         </button>
-
+      <button id="cancelBtn" onclick="cancelTest()" style="display: none;"> cancel test</button>
     </div>
+    
+   <div id="confirmBox" style="display:none;">
+    <p id="confirmMessage"></p>
+    <button onclick="confirmYes()">Yes</button>
+    <button onclick="confirmNo()">No</button>
+</div>
 
+<div id="customMessage" style="display:none; text-align: center; ">
+    <p id="messageText"></p>
+    <button onclick="closeMessage()">OK</button>
+   </div>
     <!-- Result Screen: Keep only ONE -->
     <div id="resultScreen" style="display: none;">
 
