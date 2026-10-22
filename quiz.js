@@ -1084,3 +1084,205 @@ function confirmNo() {
     document.getElementById("confirmBox").style.display = "none";
     confirmAction = null;
 }
+
+
+
+async function adminLogin() {
+    let password = document.getElementById("adminPassword").value;
+    let message = document.getElementById("adminMessage");
+
+    if (!password.trim()) {
+        message.innerText = "Please enter admin password.";
+        return;
+    }
+
+    try {
+        let response = await fetch("/api/admin/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                password: password
+            })
+        });
+
+        let data = await response.json();
+
+        if (!response.ok || !data.success) {
+            message.innerText = data.message || "Admin login failed.";
+            return;
+        }
+
+        // Save password for protected admin API requests
+        sessionStorage.setItem("adminPassword", password);
+
+        message.innerText = "Admin login successful.";
+
+    } catch (error) {
+        console.error(error);
+        message.innerText = "Unable to connect to server.";
+    }
+}
+
+
+/* FETCH ALL STUDENT RESULTS */
+async function fetchStudentResults() {
+    let message = document.getElementById("resultsMessage");
+
+    try {
+        let password = sessionStorage.getItem("adminPassword");
+
+        if (!password) {
+            message.innerText = "Please log in as admin first.";
+            return;
+        }
+
+        let response = await fetch("/api/admin/results", {
+            headers: {
+                "x-admin-password": password
+            }
+        });
+
+        let data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "Failed to fetch results.");
+        }
+
+        if (data.length === 0) {
+            message.innerText = "No student results found.";
+            return;
+        }
+
+        let output = document.getElementById("studentResults");
+
+        if (!output) {
+            output = document.createElement("div");
+            output.id = "studentResults";
+            message.after(output);
+        }
+
+        output.innerHTML = `
+            <table border="1" cellpadding="10" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Score</th>
+                        <th>Total</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map(function (student) {
+                        return `
+                            <tr>
+                                <td>${escapeHTML(student.studentName)}</td>
+                                <td>${student.score}</td>
+                                <td>${student.total}</td>
+                                <td>${student.percentage}%</td>
+                            </tr>
+                        `;
+                    }).join("")}
+                </tbody>
+            </table>
+        `;
+
+        message.innerText = "Student results loaded successfully.";
+
+    } catch (error) {
+        message.innerText = error.message;
+        console.error("Fetch results error:", error);
+    }
+}
+
+/* DELETE ALL QUESTIONS */
+async function deleteAllQuestions() {
+    showConfirm(
+        "Are you sure you want to delete ALL questions from the database?",
+        async function () {
+            let message = document.getElementById("adminMessage");
+
+            try {
+                let response = await fetch("/api/admin/questions", {
+                 method: "DELETE",
+               headers: {
+                     "x-admin-password":
+                                 sessionStorage.getItem("adminPassword") || ""
+               }
+});
+
+                let data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.message || "Failed to delete questions."
+                    );
+                }
+
+                message.innerText =
+                    data.message || "All questions deleted successfully.";
+                    setTimeout(function () {
+    location.reload();
+}, 1000);
+
+                questions = [];
+                score = 0;
+                questionIndex = 0;
+                userAnswers = [];
+                selectedAnswers = [];
+                quizStarted = false;
+
+                localStorage.removeItem("quizProgress");
+                showCorrectScreen();
+
+            } catch (error) {
+                message.innerText = error.message;
+                console.error(error);
+            }
+        }
+    );
+}
+
+async function deleteAllResults() {
+    showConfirm(
+        "Are you sure you want to delete ALL student results?",
+        async function () {
+            let message = document.getElementById("deleteResultMessage");
+
+            try {
+                   let response = await fetch("/api/admin/results", {
+                 method: "DELETE",
+                    headers: {
+                           "x-admin-password":
+                       sessionStorage.getItem("adminPassword") || ""
+                          }
+});
+
+                let data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.message || "Failed to delete results."
+                    );
+                }
+
+                message.innerText =
+                    data.message || "All student results deleted.";
+                    setTimeout(function () {
+                       location.reload();
+                                }, 1000);
+
+                // Refresh the results table if it is displayed
+                let output = document.getElementById("studentResults");
+                if (output) {
+                    output.innerHTML = "";
+                }
+
+            } catch (error) {
+                message.innerText = error.message;
+                console.error("Delete results error:", error);
+            }
+        }
+    );
+}

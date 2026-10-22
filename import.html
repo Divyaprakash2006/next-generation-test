@@ -35,7 +35,7 @@
             <button type="button" onclick="importQuestions()">
                 Import File
             </button>
-            <button type="button" onclick="deleteUploadedQuestions()">
+            <button type="button" onclick="deleteAllQuestions()">
            Delete Questions in server
       </button>
 
@@ -109,7 +109,7 @@
 
 <h2>Student Quiz Results</h2>
 
-<button type="button" onclick="loadStudentResults()">
+<button type="button" onclick="fetchStudentResults()">
     View Student Results
 </button>
 
@@ -121,28 +121,15 @@
 >
     Delete All Results
 </button>
-<div style="overflow-x: auto;">
-    <table border="1" cellpadding="10" cellspacing="0">
-        <thead>
-            <tr>
-                <th>No.</th>
-                <th>Student Name</th>
-                <th>Score</th>
-                <th>Total Questions</th>
-                <th>Percentage</th>
-                <th>Submitted At</th>
-    
-            </tr>
-        </thead>
 
-        <tbody id="resultsTable"></tbody>
-    </table>
-    </div>
-        <div class="import-footer">
-            <a href="quiz.html">Go to Quiz</a>
-        </div>
+<!-- Custom Confirmation Box -->
+<div id="confirmBox" style="display: none;">
+    <p id="confirmMessage"></p>
 
-    </div>
+    <button type="button" onclick="confirmYes()">Yes</button>
+    <button type="button" onclick="confirmNo()">No</button>
+</div>
+
 
 </body>
 </html>
