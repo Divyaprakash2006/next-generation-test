@@ -1,0 +1,104 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Simple Quiz Test</title>
+
+    <link rel="stylesheet" href="quiz.css">
+</head>
+
+<body>
+
+    <header style="background-color: aliceblue; padding: 10px;">
+        <img
+            src="./logo.svg"
+            style="width: 170px; height: 35px; object-fit: contain; display: block;"
+            alt="Quiz Logo"
+        >
+    </header>
+  
+    
+<!-- Password Screen -->
+<div id="passwordScreen" style="display: none;">
+
+    <h3>Enter Test Password</h3>
+    <input
+        type="password"
+        id="testPassword"
+        placeholder="Enter password"
+    >
+
+    <button onclick="verifyPassword()">Submit Password</button>
+
+    <p id="passwordMessage" style="color: red;"></p>
+
+</div>
+
+    <!-- Start Screen -->
+    <div id="startScreen">
+
+        <p>Test your knowledge!</p>
+
+        <h1 id="displayQuizTitle"></h1>
+
+       <button onclick="showPasswordScreen()">Start Test</button>
+
+    </div>
+
+    <!-- No Questions Message -->
+    <p id="noQuestions" style="display: none; color: red;">
+        No questions imported yet.
+    </p>
+
+    <!-- Quiz Screen -->
+    <div id="quizScreen" style="display: none;">
+
+        <p id="questionNumber"></p>
+
+        <h3 id="question"></h3>
+
+        <div id="options"></div>
+
+        <h3 id="feedback"></h3>
+
+        <button id="clearBtn" onclick="clearAnswer()" disabled>
+            Clear Answer
+        </button>
+
+        <button id="submitBtn" onclick="checkAnswer()" disabled>
+            Submit Answer
+        </button>
+
+        <button id="nextBtn" onclick="nextQuestion()" style="display: none;">
+            Next
+        </button>
+
+    </div>
+
+    <!-- Result Screen: Keep only ONE -->
+    <div id="resultScreen" style="display: none;">
+
+        <h1>Test Completed!</h1>
+
+        <h2 id="score"></h2>
+
+        <h3 id="percentage"></h3>
+
+        <p id="resultMessage"></p>
+
+        <h2>Answer Review</h2>
+
+        <div id="answerReview"></div>
+
+        <button onclick="restartQuiz()">Restart Quiz</button>
+
+    </div>
+
+    <script src="quiz.js"></script>
+
+</body>
+</html>

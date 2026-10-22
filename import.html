@@ -1,0 +1,126 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Question Import</title>
+    <link rel="stylesheet" href="quiz.css">
+    <script src="quiz.js" defer></script>
+</head>
+<body>
+
+    <div class="import-container">
+
+        <h1>Quiz Question Import</h1>
+        <p>Import questions from a text file or type them manually.</p>
+
+        <!-- Quiz Title -->
+        <section class="import-card">
+            <h2>Quiz Details</h2>
+
+            <label for="quizTitleInput">Quiz Title</label>
+            <input
+                type="text"
+                id="quizTitleInput"
+                placeholder="Enter quiz title"
+            >
+
+            <button type="button" onclick="saveQuizTitle()">
+                Save Quiz Title
+            </button>
+        </section>
+
+        <!-- File Import -->
+        <section class="import-card">
+            <h2>Import From Text File</h2>
+
+            <label for="questionFile">Choose Question File (.txt)</label>
+            <input
+                type="file"
+                id="questionFile"
+                accept=".txt,text/plain"
+            >
+
+            <button type="button" onclick="importQuestions()">
+                Import File
+            </button>
+            <button type="button" onclick="deleteUploadedQuestions()">
+    Delete All Uploaded Questions
+      </button>
+
+            <p id="importMessage" class="message"></p>
+        </section>
+
+        <!-- Manual Import -->
+        <section class="import-card">
+            <h2>Type Questions Manually</h2>
+
+            <textarea
+                id="typedQuestions"
+                rows="12"
+                placeholder="Enter questions here...&#10;&#10;What is HTML?&#10;A. Programming language&#10;B. Markup language&#10;C. Database&#10;D. Operating system&#10;ANSWER: B"
+            ></textarea>
+
+            <button type="button" onclick="importTypedQuestions()">
+                Prepare Typed Questions
+            </button>
+
+            <p id="typedImportMessage" class="message"></p>
+        </section>
+
+        <!-- Admin Upload -->
+        <section class="import-card admin-card">
+            <h2>Admin Upload Questions</h2>
+
+            <p>
+                Prepared Questions:
+                <strong id="questionCount">0</strong>
+            </p>
+
+            <div id="adminLogin">
+                <label for="adminPassword">Admin Password</label>
+
+                <input
+                    type="password"
+                    id="adminPassword"
+                    placeholder="Enter admin password"
+                >
+
+                <button type="button" onclick="adminLogin()">
+                    Admin Login
+                </button>
+
+                <p id="adminMessage" class="message"></p>
+            </div>
+
+            <div id="adminPanel" style="display:none;">
+                <button
+                    type="button"
+                    onclick="uploadQuestionsToServer()"
+                >
+                    Upload Questions to MongoDB
+                </button>
+
+                <button
+                    type="button"
+                    class="logout-button"
+                    onclick="adminLogout()"
+                >
+                    Logout
+                </button>
+
+                <p id="uploadMessage" class="message">
+                    Import questions before uploading.
+                </p>
+            </div>
+        </section>
+
+        <div class="import-footer">
+            <a href="quiz.html">Go to Quiz</a>
+        </div>
+
+    </div>
+
+</body>
+</html>
