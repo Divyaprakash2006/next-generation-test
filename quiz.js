@@ -209,7 +209,7 @@ function verifyPassword() {
 
 function startQuiz() {
     if (questions.length === 0) {
-        document.getElementById("noQuestions").innerText="No Questions Available in Server"
+        alert("No Questions in Server ")
         return;
     }
 
@@ -1285,4 +1285,32 @@ async function deleteAllResults() {
             }
         }
     );
+}
+
+function checkQuestions() {
+    let noQuestions = document.getElementById("noQuestions");
+    let startScreen = document.getElementById("startScreen");
+    let quizScreen = document.getElementById("quizScreen");
+
+    if (questions.length === 0) {
+        noQuestions.innerText =
+            "No Questions Available In Server";
+
+        noQuestions.style.display = "block";
+
+        if (startScreen) {
+            startScreen.style.display = "none";
+        }
+
+        if (quizScreen) {
+            quizScreen.style.display = "none";
+        }
+    } else {
+        noQuestions.innerText = "";
+        noQuestions.style.display = "none";
+
+        if (startScreen) {
+            startScreen.style.display = "block";
+        }
+    }
 }
