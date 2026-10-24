@@ -93,7 +93,7 @@ async function loadQuestionsFromServer() {
         questions = Array.isArray(data)
             ? data
             : (data.questions || []);
-
+        checkQuestions();
         showCorrectScreen();
 
         if (message) {
@@ -202,6 +202,33 @@ function verifyPassword() {
     }
 }
 
+function checkQuestions() {
+    let noQuestions = document.getElementById("noQuestions");
+    let startScreen = document.getElementById("startScreen");
+    let quizScreen = document.getElementById("quizScreen");
+
+    if (questions.length === 0) {
+        noQuestions.innerText =
+            "No Questions Available In Server";
+
+        noQuestions.style.display = "block";
+
+        if (startScreen) {
+            startScreen.style.display = "none";
+        }
+
+        if (quizScreen) {
+            quizScreen.style.display = "none";
+        }
+    } else {
+        noQuestions.innerText = "";
+        noQuestions.style.display = "none";
+
+        if (startScreen) {
+            startScreen.style.display = "block";
+        }
+    }
+}
 
 /* ==============================
    6. START QUIZ
@@ -1222,6 +1249,7 @@ async function deleteAllQuestions() {
 
                 message.innerText =
                     data.message || "All questions deleted in server";
+                    checkQuestions();
                     setTimeout(function () {
                      location.reload();
                         }, 1000);
@@ -1287,30 +1315,3 @@ async function deleteAllResults() {
     );
 }
 
-function checkQuestions() {
-    let noQuestions = document.getElementById("noQuestions");
-    let startScreen = document.getElementById("startScreen");
-    let quizScreen = document.getElementById("quizScreen");
-
-    if (questions.length === 0) {
-        noQuestions.innerText =
-            "No Questions Available In Server";
-
-        noQuestions.style.display = "block";
-
-        if (startScreen) {
-            startScreen.style.display = "none";
-        }
-
-        if (quizScreen) {
-            quizScreen.style.display = "none";
-        }
-    } else {
-        noQuestions.innerText = "";
-        noQuestions.style.display = "none";
-
-        if (startScreen) {
-            startScreen.style.display = "block";
-        }
-    }
-}
