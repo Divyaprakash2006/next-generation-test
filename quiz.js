@@ -209,7 +209,7 @@ function verifyPassword() {
 
 function startQuiz() {
     if (questions.length === 0) {
-        alert("No questions are available.");
+        document.getElementById("noQuestions").innerText="No Questions Available in Server"
         return;
     }
 
@@ -676,7 +676,7 @@ async function uploadQuestionsToServer(questionsToUpload) {
     }
 
     try {
-        message.innerText = "Uploading questions...";
+        message.innerText = "Uploading questions in server";
 
         let response = await fetch("/api/admin/questions", {
             method: "POST",
@@ -696,7 +696,7 @@ async function uploadQuestionsToServer(questionsToUpload) {
         }
 
         message.innerText =
-            data.message || "Questions uploaded successfully.";
+            data.message || "Questions uploaded successfully in server";
 
         return true;
 
@@ -909,7 +909,7 @@ async function importTypedQuestions() {
     localStorage.setItem("importedFileName", "Typed Questions");
 
     message.innerText =
-        importedQuestions.length + " questions uploaded successfully." +
+        importedQuestions.length + " questions uploaded successfully in server" +
         (errors.length ? "\nSkipped:\n" + errors.join("\n") : "");
 
     showCorrectScreen();
@@ -1221,10 +1221,10 @@ async function deleteAllQuestions() {
                 }
 
                 message.innerText =
-                    data.message || "All questions deleted successfully.";
+                    data.message || "All questions deleted in server";
                     setTimeout(function () {
-    location.reload();
-}, 1000);
+                     location.reload();
+                        }, 1000);
 
                 questions = [];
                 score = 0;
@@ -1268,7 +1268,7 @@ async function deleteAllResults() {
                 }
 
                 message.innerText =
-                    data.message || "All student results deleted.";
+                    data.message || "All student results deleted in server";
                     setTimeout(function () {
                        location.reload();
                                 }, 1000);

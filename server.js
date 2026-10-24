@@ -270,7 +270,7 @@ app.post("/api/admin/questions", checkAdmin, async function (req, res) {
         return res.json({
             success: true,
             message: cleanQuestions.length +
-                " questions uploaded successfully.",
+                " questions uploaded server.",
             total: cleanQuestions.length
         });
 
