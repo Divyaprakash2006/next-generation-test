@@ -556,3 +556,131 @@ button {
     font-size: 14px;
     color: #718096;
 }
+
+.question-actions {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.question-actions button {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 7px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#previousBtn {
+    background-color: #00aeef;
+    color: white;
+}
+
+#clearBtn {
+    background-color: #e5e7eb;
+    color: #222;
+}
+
+#saveNextBtn {
+    background-color: #2563eb;
+    color: white;
+    font-weight: bold;
+}
+
+#saveNextBtn:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.question-actions button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 7px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+@media (max-width: 600px) {
+    .question-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+/* Quiz screen two-column layout */
+#quizScreen {
+    width: 100%;
+}
+
+.quiz-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 25px;
+    margin-top: 20px;
+    align-items: start;
+    width: 100%;
+}
+
+.quiz-main {
+    min-width: 0;
+}
+
+.question-palette {
+    width: 100%;
+
+    box-sizing: border-box;
+    background: aliceblue;
+    padding: 18px;
+    
+    border: 1px solid #ccc;
+    position: sticky;
+    top: 20px;
+}
+
+.question-palette h3 {
+    text-align: center;
+    margin-top: 0;
+}
+
+#paletteButtons {
+    display: grid;
+    grid-template-columns: repeat(4, 45px);
+    gap: 12px;
+    justify-content: center;
+}
+
+.palette-btn {
+    width: 45px;
+    height: 45px;
+    padding: 0;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: black;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.palette-btn.current {
+    background: #1769aa;
+    color: white;
+}
+
+.palette-btn.answered {
+    background: #198754;
+    color: white;
+}
+
+/* Mobile view */
+@media (max-width: 700px) {
+    .quiz-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .question-palette {
+        position: static;
+    }
+}

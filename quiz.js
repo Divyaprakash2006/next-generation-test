@@ -435,63 +435,73 @@ function showQuestion() {
 
     optionsElement.innerHTML = optionsHTML;
 
-    let submitted =
-        userAnswers[questionIndex] != null &&
-        userAnswers[questionIndex] !== "";
-
     let selected = selectedAnswers[questionIndex];
 
     document.querySelectorAll('input[name="answer"]').forEach(function (radio) {
 
-        radio.checked = submitted
-            ? radio.value === userAnswers[questionIndex]
-            : radio.value === selected;
+        radio.checked = radio.value === selected;
 
-        radio.disabled = submitted;
     });
 
     let clearBtn = document.getElementById("clearBtn");
-    let submitBtn = document.getElementById("submitBtn");
-    let nextBtn = document.getElementById("nextBtn");
+    let saveNextBtn = document.getElementById("saveNextBtn");
     let feedback = document.getElementById("feedback");
     let previousBtn = document.getElementById("previousBtn");
 
     if (clearBtn) {
-        clearBtn.disabled = !selected || submitted;
+        clearBtn.disabled = !selected;
     }
 
-    if (submitBtn) {
-        submitBtn.disabled = !selected || submitted;
+    if (saveNextBtn) {
+
+        saveNextBtn.disabled = !selected;
+
+        saveNextBtn.innerText =
+            questionIndex === questions.length - 1
+                ? "Submit Test"
+                : "Save & Next";
     }
 
     if (feedback) {
         feedback.innerText = "";
     }
 
-    if (nextBtn) {
-
-        if (submitted) {
-
-            nextBtn.style.display = "inline-block";
-
-            nextBtn.innerText =
-                questionIndex === questions.length - 1
-                    ? "Submit Test"
-                    : "Next";
-
-        } else {
-
-            nextBtn.style.display = "none";
-        }
-    }
-
     if (previousBtn) {
 
         previousBtn.style.display =
             questionIndex === 0 ? "none" : "inline-block";
-
-        previousBtn.disabled = questionIndex === 0;
     }
+
+    showQuestionPalette();
+}
+
+
+function showQuestionPalette() {
+    let palette = document.getElementById("paletteButtons");
+
+    if (!palette) return;
+
+    palette.innerHTML = "";
+
+    questions.forEach(function (q, index) {
+        let button = document.createElement("button");
+
+        button.innerText = index + 1;
+        button.className = "palette-btn";
+
+        if (index === questionIndex) {
+            button.classList.add("current");
+        } else if (userAnswers[index]) {
+            button.classList.add("answered");
+        }
+
+        button.onclick = function () {
+            questionIndex = index;
+            showQuestion();
+        };
+
+        palette.appendChild(button);
+    });
 }
 
 
@@ -507,20 +517,24 @@ function answerSelected() {
 
     if (!selected) return;
 
-    delete userAnswers[questionIndex];
-
     selectedAnswers[questionIndex] =
         selected.value.trim().toUpperCase();
 
-    let nextBtn = document.getElementById("nextBtn");
+    let saveNextBtn = document.getElementById("saveNextBtn");
     let clearBtn = document.getElementById("clearBtn");
-    let submitBtn = document.getElementById("submitBtn");
     let feedback = document.getElementById("feedback");
 
-    if (nextBtn) nextBtn.style.display = "none";
-    if (clearBtn) clearBtn.disabled = false;
-    if (submitBtn) submitBtn.disabled = false;
-    if (feedback) feedback.innerText = "";
+    if (saveNextBtn) {
+        saveNextBtn.disabled = false;
+    }
+
+    if (clearBtn) {
+        clearBtn.disabled = false;
+    }
+
+    if (feedback) {
+        feedback.innerText = "";
+    }
 
     saveQuizProgress();
 }
@@ -532,23 +546,23 @@ function answerSelected() {
 
 function clearAnswer() {
 
-    delete userAnswers[questionIndex];
     delete selectedAnswers[questionIndex];
+    delete userAnswers[questionIndex];
 
     document.querySelectorAll('input[name="answer"]').forEach(function (radio) {
         radio.checked = false;
-        radio.disabled = false;
     });
 
+    let saveNextBtn = document.getElementById("saveNextBtn");
     let clearBtn = document.getElementById("clearBtn");
-    let submitBtn = document.getElementById("submitBtn");
-    let nextBtn = document.getElementById("nextBtn");
     let feedback = document.getElementById("feedback");
 
+    if (saveNextBtn) saveNextBtn.disabled = true;
     if (clearBtn) clearBtn.disabled = true;
-    if (submitBtn) submitBtn.disabled = true;
-    if (nextBtn) nextBtn.style.display = "none";
-    if (feedback) feedback.innerText = "";
+
+    if (feedback) {
+        feedback.innerText = "";
+    }
 
     saveQuizProgress();
 }
@@ -558,7 +572,7 @@ function clearAnswer() {
    12. SUBMIT ANSWER
 ========================================== */
 
-function checkAnswer() {
+function saveAndNext() {
 
     let selected = document.querySelector(
         'input[name="answer"]:checked'
@@ -575,53 +589,16 @@ function checkAnswer() {
         return;
     }
 
+    // Save selected answer
     let answer = selected.value.trim().toUpperCase();
 
-    userAnswers[questionIndex] = answer;
     selectedAnswers[questionIndex] = answer;
+    userAnswers[questionIndex] = answer;
 
-    if (feedback) {
-        feedback.innerText = "Answer submitted successfully!";
-    }
-
-    document.querySelectorAll('input[name="answer"]').forEach(function (radio) {
-        radio.disabled = true;
-    });
-
-    let clearBtn = document.getElementById("clearBtn");
-    let submitBtn = document.getElementById("submitBtn");
-    let nextBtn = document.getElementById("nextBtn");
-
-    if (clearBtn) clearBtn.disabled = true;
-    if (submitBtn) submitBtn.disabled = true;
-
-    if (nextBtn) {
-
-        nextBtn.style.display = "inline-block";
-
-        nextBtn.innerText =
-            questionIndex === questions.length - 1
-                ? "Submit Test"
-                : "Next";
-    }
-
+    // Save progress
     saveQuizProgress();
-}
 
-
-/* ==========================================
-   13. NEXT QUESTION
-========================================== */
-
-function nextQuestion() {
-
-    if (
-        userAnswers[questionIndex] == null ||
-        userAnswers[questionIndex] === ""
-    ) {
-        return;
-    }
-
+    // Move to next question
     if (questionIndex < questions.length - 1) {
 
         questionIndex++;
@@ -632,9 +609,17 @@ function nextQuestion() {
 
     } else {
 
+        // Last question: Submit complete test
         completeTest();
+
     }
 }
+
+/* ==========================================
+   13. NEXT QUESTION
+========================================== */
+
+
 
 
 /* ==========================================
