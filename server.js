@@ -11,17 +11,12 @@ const path = require("path");
 dotenv.config();
 
 const app = express();
-app.use(express.json());
 app.use(express.json({ limit: "2mb" }));
 
 // Serve frontend files from the public folder.
 app.use(express.static(__dirname));
 
 app.get("/", function (req, res) {
-    res.sendFile(path.join(__dirname, "import.html"));
-});
-
-app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "quiz.html"));
 });
 /* =========================================
@@ -66,6 +61,14 @@ const questionSchema = new mongoose.Schema({
 });
 
 const Question = mongoose.model("Question", questionSchema);
+const settingSchema = new mongoose.Schema({
+    reviewEnabled: {
+        type: Boolean,
+        default: false
+    }
+});
+
+const Setting = mongoose.model("Setting", settingSchema);
 
 
 /* =========================================
@@ -399,6 +402,7 @@ app.post("/api/quiz/results", async (req, res) => {
             score: score,
             total: total,
             percentage: percentage,
+            feedback: Array.isArray(req.body.feedback) ? req.body.feedback : [],
             createdAt: new Date()
         });
 
@@ -422,11 +426,6 @@ app.post("/api/quiz/results", async (req, res) => {
    9. TEST API AND FRONTEND ROUTES
 ========================================= */
 
-// Redirect the root URL to the import page.
-app.get("/", function (req, res) {
-    return res.redirect("/import.html");
-});
-
 // Simple endpoint to check if the server is responding.
 app.get("/api/health", function (req, res) {
     return res.json({
@@ -434,7 +433,90 @@ app.get("/api/health", function (req, res) {
         message: "Quiz server is running."
     });
 });
+/* =========================================
+   10. ADMIN STUDENT REVIEW SETTINGS
+========================================= */
 
+// ADMIN: Get review permission
+app.get("/api/admin/review-setting", checkAdmin, async (req, res) => {
+    try {
+        let setting = await Setting.findOne();
+
+        if (!setting) {
+            setting = await Setting.create({
+                reviewEnabled: false
+            });
+        }
+
+        res.json({
+            success: true,
+            reviewEnabled: setting.reviewEnabled
+        });
+
+    } catch (error) {
+        console.error("Get review setting error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Unable to get review setting."
+        });
+    }
+});
+
+
+// ADMIN: Enable or disable student review
+app.post("/api/admin/review-setting", checkAdmin, async (req, res) => {
+    try {
+        let setting = await Setting.findOne();
+
+        if (!setting) {
+            setting = new Setting();
+        }
+
+        setting.reviewEnabled = req.body.reviewEnabled === true;
+
+        await setting.save();
+
+        res.json({
+            success: true,
+            reviewEnabled: setting.reviewEnabled,
+            message: setting.reviewEnabled
+                ? "Student review enabled successfully."
+                : "Student review disabled successfully."
+        });
+
+    } catch (error) {
+        console.error("Update review setting error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Unable to update review setting."
+        });
+    }
+});
+
+
+// STUDENT: Check review permission
+app.get("/api/quiz/review-setting", async (req, res) => {
+    try {
+        const setting = await Setting.findOne();
+
+        res.json({
+            success: true,
+            reviewEnabled: setting
+                ? setting.reviewEnabled
+                : false
+        });
+
+    } catch (error) {
+        console.error("Student review setting error:", error);
+
+        res.status(500).json({
+            success: false,
+            reviewEnabled: false
+        });
+    }
+});
 
 /* =========================================
    10. HANDLE INVALID API ROUTES

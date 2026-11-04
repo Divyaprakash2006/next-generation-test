@@ -1,135 +1,84 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Question Import</title>
+    <title>Quiz Admin Dashboard</title>
     <link rel="stylesheet" href="quiz.css">
     <script src="quiz.js" defer></script>
 </head>
-<body>
-     <header style="background-color: aliceblue; padding: 10px;">
-        <img
-            src="./logo.svg"
-            style="width: 170px; height: 35px; object-fit: contain; display: block;"
-            alt="Quiz Logo"
-        >
+<body class="admin-page">
+    <header class="site-header">
+        <img src="./logo.svg" alt="Quiz Logo" class="site-logo">
+        <a href="/" class="student-link">Student Quiz</a>
     </header>
-    <div class="import-container">
 
-        <h1>Quiz Question Import</h1>
-        <p>Import questions from a text file or type them manually.</p>
-
-
-        <!-- File Import -->
-        <section class="import-card">
-            <h2>Import From Text File</h2>
-            <label for="questionFile">Choose Question File (.txt)</label>
-            <input
-                type="file"
-                id="questionFile"
-                accept=".txt,text/plain"
-            >
-
-            <button type="button" onclick="importQuestions()">
-                Import File
-            </button>
-            <button type="button" onclick="deleteAllQuestions()">
-           Delete Questions in server
-      </button>
-
-            <p id="importMessage" class="message"></p>
-        </section>
-
-        <!-- Manual Import -->
-        <section class="import-card">
-            <h2>Type Questions Manually</h2>
-
-            <textarea
-                id="typedQuestions"
-                rows="12"
-                placeholder="Enter questions here..."
-            ></textarea>
-
-            <button type="button" onclick="importTypedQuestions()">
-                Prepare Typed Questions
-            </button>
-
-            <p id="typedImportMessage" class="message"></p>
-        </section>
-
-        <!-- Admin Upload -->
-        <section class="import-card admin-card">
-            <h2>Admin Upload Questions in Server</h2>
-
-            <p>
-                Prepared Questions:
-                <strong id="questionCount">0</strong>
-            </p>
-
+    <main class="import-container">
+        <section id="adminLoginGate" class="import-card login-card">
+            <h1>Admin Login</h1>
+            <p>Enter the administrator password to open the quiz management dashboard.</p>
             <div id="adminLogin">
                 <label for="adminPassword">Admin Password</label>
-
-                <input
-                    type="password"
-                    id="adminPassword"
-                    placeholder="Enter admin password"
-                >
-
-                <button type="button" onclick="adminLogin()">
-                    Admin Login
-                </button>
-
-                <p id="adminMessage" class="message"></p>
-            </div>
-
-            <div id="adminPanel" style="display:none;">
-                <button
-                    type="button"
-                    onclick="uploadQuestionsToServer()"
-                >
-                    Upload Questions to server
-                </button>
-
-                <button
-                    type="button"
-                    class="logout-button"
-                    onclick="adminLogout()"
-                >
-                    Logout
-                </button>
-
-                <p id="uploadMessage" class="message">
-                    Import questions before uploading.
-                </p>
+                <input type="password" id="adminPassword" placeholder="Enter admin password" autocomplete="current-password">
+                <button type="button" onclick="adminLogin()">Login to Admin Page</button>
+                <p id="adminMessage" class="message" role="status"></p>
             </div>
         </section>
-       <hr>
 
-<h2>Student Quiz Results</h2>
+        <div id="adminPanel" style="display:none;">
+            <div class="dashboard-heading">
+                <div><h1>Quiz Admin Dashboard</h1><p>Manage questions, student results and review permissions.</p></div>
+                <button type="button" class="logout-button" onclick="adminLogout()">Logout</button>
+            </div>
 
-<button type="button" onclick="fetchStudentResults()">
-    View Student Results
-</button>
+            <section class="import-card">
+                <h2>Import Questions From Text File</h2>
+                <label for="questionFile">Choose Question File (.txt)</label>
+                <input type="file" id="questionFile" accept=".txt,text/plain">
+                <button type="button" onclick="importQuestions()">Import File and Upload</button>
+                <p id="importMessage" class="message"></p>
+            </section>
 
-<p id="resultsMessage"></p>
-<button
-    type="button"
-    onclick="deleteAllResults()"
-    style="background-color: red; color: white;"
->
-    Delete All Results
-</button>
+            <section class="import-card">
+                <h2>Type Questions Manually</h2>
+                <textarea id="typedQuestions" rows="12" placeholder="Enter each question, options and ANSWER line. Separate questions with a blank line."></textarea>
+                <button type="button" onclick="importTypedQuestions()">Prepare and Upload Typed Questions</button>
+                <p id="typedImportMessage" class="message"></p>
+            </section>
 
-<!-- Custom Confirmation Box -->
-<div id="confirmBox" style="display: none;">
-    <p id="confirmMessage"></p>
+            <section class="import-card">
+                <h2>Question Management</h2>
+                <p>Prepared Questions: <strong id="questionCount">0</strong></p>
+                <p id="uploadMessage" class="message">Import questions before uploading.</p>
+                <button type="button" class="danger-button" onclick="deleteAllQuestions()">Delete All Server Questions</button>
+            </section>
 
-    <button type="button" onclick="confirmYes()">Yes</button>
-    <button type="button" onclick="confirmNo()">No</button>
-</div>
+            <section class="import-card">
+                <h2>Student Answer Review Permission</h2>
+                <p>When enabled, students can see their answer review after submitting the test. When disabled, they see the Thank You banner.</p>
+                <p id="reviewStatus" class="status-text">Loading permission...</p>
+                <button type="button" id="reviewToggleBtn" onclick="toggleStudentReview()">Enable Student Review</button>
+                <p id="reviewSettingMessage" class="message" role="status"></p>
+            </section>
 
+            <section class="import-card">
+                <h2>Student Quiz Results</h2>
+                <button type="button" onclick="fetchStudentResults()">View Student Results</button>
+                <button type="button" class="danger-button" onclick="deleteAllResults()">Delete All Results</button>
+                <p id="resultsMessage" class="message" role="status"></p>
+                <div id="studentResults"></div>
+            </section>
 
+            <div id="confirmBox" style="display:none;">
+                <p id="confirmMessage"></p>
+                <button type="button" onclick="confirmYes()">Yes</button>
+                <button type="button" onclick="confirmNo()">No</button>
+            </div>
+            <div id="customMessage" style="display:none; text-align:center;">
+                <p id="messageText"></p>
+                <button type="button" onclick="closeMessage()">OK</button>
+            </div>
+        </div>
+    </main>
 </body>
 </html>

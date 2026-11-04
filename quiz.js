@@ -34,6 +34,30 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     await loadQuestionsFromServer();
 
+    // Restore the admin panel after a page refresh in the same browser tab.
+    let savedAdminPassword = sessionStorage.getItem("adminPassword");
+    if (savedAdminPassword && document.getElementById("adminPanel")) {
+        try {
+            let authCheck = await fetch("/api/admin/review-setting", {
+                headers: { "x-admin-password": savedAdminPassword },
+                cache: "no-store"
+            });
+            if (authCheck.ok) {
+                let adminPanel = document.getElementById("adminPanel");
+                let adminLoginBox = document.getElementById("adminLogin");
+                if (adminPanel) adminPanel.style.display = "block";
+                if (adminLoginBox) adminLoginBox.style.display = "none";
+                let loginGate = document.getElementById("adminLoginGate");
+                if (loginGate) loginGate.style.display = "none";
+                await loadAdminReviewSetting();
+            } else {
+                sessionStorage.removeItem("adminPassword");
+            }
+        } catch (error) {
+            console.error("Admin session check failed:", error);
+        }
+    }
+
     // Restore progress only after the server questions have loaded.
     if (questions.length > 0 && loadQuizProgress()) {
         let startScreen = document.getElementById("startScreen");
@@ -62,8 +86,14 @@ window.addEventListener("DOMContentLoaded", async function () {
 });
 
 function showMessage(message) {
-    document.getElementById("messageText").innerText = message;
-    document.getElementById("customMessage").style.display = "block";
+    let text = document.getElementById("messageText");
+    let box = document.getElementById("customMessage");
+    if (text && box) {
+        text.innerText = message;
+        box.style.display = "block";
+    } else {
+        alert(message);
+    }
 }
 function closeMessage() {
     document.getElementById("customMessage").style.display = "none";
@@ -208,10 +238,10 @@ function checkQuestions() {
     let quizScreen = document.getElementById("quizScreen");
 
     if (questions.length === 0) {
-        noQuestions.innerText =
-            "No Questions Available In Server";
-
-        noQuestions.style.display = "block";
+        if (noQuestions) {
+            noQuestions.innerText = "No Questions Available In Server";
+            noQuestions.style.display = "block";
+        }
 
         if (startScreen) {
             startScreen.style.display = "none";
@@ -221,8 +251,10 @@ function checkQuestions() {
             quizScreen.style.display = "none";
         }
     } else {
-        noQuestions.innerText = "";
-        noQuestions.style.display = "none";
+        if (noQuestions) {
+            noQuestions.innerText = "";
+            noQuestions.style.display = "none";
+        }
 
         if (startScreen) {
             startScreen.style.display = "block";
@@ -313,12 +345,21 @@ function showQuestion() {
     document.getElementById("feedback").innerText = "";
 
     let nextBtn = document.getElementById("nextBtn");
-    if (submitted) {
-        nextBtn.style.display = "inline-block";
-        nextBtn.innerText = questionIndex === questions.length - 1 ? "Show Result" : "Next";
-    } else {
-        nextBtn.style.display = "none";
-    }
+
+if (submitted) {
+
+    nextBtn.style.display = "inline-block";
+
+    nextBtn.innerText =
+        questionIndex === questions.length - 1
+            ? "Submit Test"
+            : "Next";
+
+} else {
+
+    nextBtn.style.display = "none";
+
+}
     let previousBtn = document.getElementById("previousBtn");
     if (previousBtn) previousBtn.disabled = questionIndex === 0;
     // Previous Question button visibility
@@ -397,7 +438,7 @@ function checkAnswer() {
     document.getElementById("submitBtn").disabled = true;
     let nextBtn = document.getElementById("nextBtn");
     nextBtn.style.display = "inline-block";
-    nextBtn.innerText = questionIndex === questions.length - 1 ? "Show Result" : "Next";
+    nextBtn.innerText = questionIndex === questions.length - 1 ? "Submit Test" : "Next";
     saveQuizProgress();
 }
 
@@ -411,6 +452,7 @@ function nextQuestion() {
     if (questionIndex < questions.length - 1) {
         questionIndex++;
         saveQuizProgress();
+        
         showQuestion();
     } else {
         completeTest();
@@ -478,20 +520,37 @@ async function completeTest() {
         ? (score / total) * 100
         : 0;
 
-    document.getElementById("score").innerText =
-        "Your Score: " + score + " / " + total;
+    const finalScore = document.getElementById("finalScore");
+    const finalPercentage = document.getElementById("finalPercentage");
 
-    document.getElementById("percentage").innerText =
-        "Percentage: " + percentageValue.toFixed(2) + "%";
+    if (finalScore) finalScore.innerText = score + " / " + total;
+    if (finalPercentage) finalPercentage.innerText = percentageValue.toFixed(2) + "%";
 
     document.getElementById("resultMessage").innerText =
-        "Test Completed!";
-   let cancelBtn = document.getElementById("cancelBtn");
+    "Test Completed!";
 
-  if (cancelBtn) {
+let cancelBtn = document.getElementById("cancelBtn");
+
+if (cancelBtn) {
     cancelBtn.style.display = "none";
-   }
-    showFinalReview();
+}
+
+    // Hide review and Thank You first. The saved admin setting decides what appears.
+    let reviewElement = document.getElementById("answerReview");
+    let thankYou = document.getElementById("thankYouMessage");
+
+    if (reviewElement) {
+        reviewElement.innerHTML = "";
+        reviewElement.style.display = "none";
+    }
+    if (thankYou) thankYou.style.display = "none";
+
+    let canShowReview = await checkStudentReviewPermission();
+    if (canShowReview) {
+        showFinalReview();
+    } else if (thankYou) {
+        thankYou.style.display = "block";
+    }
     window.scrollTo(0, 0);
 
     // Save result to MongoDB through the backend.
@@ -505,7 +564,26 @@ async function completeTest() {
                 studentName: studentName,
                 score: score,
                 total: total,
-                percentage: Number(percentageValue.toFixed(2))
+                percentage: Number(percentageValue.toFixed(2)),
+                feedback: questions.map(function (q, index) {
+                    let selectedLetter = String(userAnswers[index] || "").trim().toUpperCase();
+                    let correctLetter = String(q.answer || "").trim().toUpperCase();
+                    let selectedOption = q.options.find(function (option, optionIndex) {
+                        return getOptionLetter(option, optionIndex) === selectedLetter;
+                    });
+                    let correctOption = q.options.find(function (option, optionIndex) {
+                        return getOptionLetter(option, optionIndex) === correctLetter;
+                    });
+                    return {
+                        question: q.question,
+                        options: q.options,
+                        selectedAnswer: selectedLetter,
+                        selectedText: selectedOption ? getOptionText(selectedOption) : "Not answered",
+                        correctAnswer: correctLetter,
+                        correctText: correctOption ? getOptionText(correctOption) : "Correct answer not found",
+                        isCorrect: selectedLetter !== "" && selectedLetter === correctLetter
+                    };
+                })
             })
         });
 
@@ -616,6 +694,15 @@ function restartQuiz() {
     studentName = "";
     localStorage.removeItem("quizProgress");
 
+    let reviewElement = document.getElementById("answerReview");
+    let thankYou = document.getElementById("thankYouMessage");
+
+    if (reviewElement) {
+        reviewElement.innerHTML = "";
+        reviewElement.style.display = "none";
+    }
+    if (thankYou) thankYou.style.display = "none";
+
     document.getElementById("resultScreen").style.display = "none";
     document.getElementById("quizScreen").style.display = "none";
     document.getElementById("startScreen").style.display = "block";
@@ -689,10 +776,10 @@ async function uploadQuestionsToServer(questionsToUpload) {
         return false;
     }
 
-    let password = passwordElement.value.trim();
+    let password = sessionStorage.getItem("adminPassword") || "";
 
     if (!password) {
-        message.innerText = "Enter the admin password.";
+        message.innerText = "Please log in as admin first.";
         return false;
     }
 
@@ -1092,8 +1179,17 @@ function cancelTest() {
 let confirmAction = null;
 
 function showConfirm(message, action) {
-    document.getElementById("confirmMessage").innerText = message;
-    document.getElementById("confirmBox").style.display = "block";
+    let messageElement = document.getElementById("confirmMessage");
+    let confirmBox = document.getElementById("confirmBox");
+
+    // Use the browser confirmation dialog if this page has no custom modal.
+    if (!messageElement || !confirmBox) {
+        if (window.confirm(message)) action();
+        return;
+    }
+
+    messageElement.innerText = message;
+    confirmBox.style.display = "block";
     confirmAction = action;
 }
 
@@ -1112,6 +1208,98 @@ function confirmNo() {
     confirmAction = null;
 }
 
+
+
+/* ==============================
+   ADMIN STUDENT REVIEW PERMISSION
+============================== */
+
+let reviewEnabled = false;
+
+// Read the saved permission after admin login.
+async function loadAdminReviewSetting() {
+    let password = sessionStorage.getItem("adminPassword");
+    if (!password) return;
+
+    try {
+        let response = await fetch("/api/admin/review-setting", {
+            headers: { "x-admin-password": password }
+        });
+        let data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "Unable to load review setting.");
+        }
+
+        reviewEnabled = data.reviewEnabled === true;
+        updateReviewButton();
+
+    } catch (error) {
+        console.error("Review setting load error:", error);
+        let message = document.getElementById("reviewSettingMessage");
+        if (message) message.innerText = error.message;
+    }
+}
+
+function updateReviewButton() {
+    let button = document.getElementById("reviewToggleBtn");
+    if (!button) return;
+
+    button.innerText = reviewEnabled
+        ? "Disable Student Review"
+        : "Enable Student Review";
+    let status = document.getElementById("reviewStatus");
+    if (status) status.innerText = reviewEnabled
+        ? "Student answer review is currently ENABLED."
+        : "Student answer review is currently DISABLED.";
+}
+
+// Admin toggles student review on/off. The setting is saved in MongoDB by server.js.
+async function toggleStudentReview() {
+    let password = sessionStorage.getItem("adminPassword");
+    let message = document.getElementById("reviewSettingMessage");
+
+    if (!password) {
+        if (message) message.innerText = "Please log in as admin first.";
+        return;
+    }
+
+    try {
+        let response = await fetch("/api/admin/review-setting", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-admin-password": password
+            },
+            body: JSON.stringify({ reviewEnabled: !reviewEnabled })
+        });
+        let data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "Unable to update review setting.");
+        }
+
+        reviewEnabled = data.reviewEnabled === true;
+        updateReviewButton();
+        if (message) message.innerText = data.message || "Review setting updated.";
+
+    } catch (error) {
+        if (message) message.innerText = error.message;
+        console.error("Review setting update error:", error);
+    }
+}
+
+// Students can read only the permission flag, not the admin setting endpoint.
+async function checkStudentReviewPermission() {
+    try {
+        let response = await fetch("/api/quiz/review-setting", { cache: "no-store" });
+        let data = await response.json();
+        return response.ok && data.reviewEnabled === true;
+    } catch (error) {
+        console.error("Student review permission error:", error);
+        return false;
+    }
+}
 
 
 async function adminLogin() {
@@ -1145,6 +1333,16 @@ async function adminLogin() {
         sessionStorage.setItem("adminPassword", password);
 
         message.innerText = "Admin login successful.";
+
+        // Show the admin panel and load the saved review permission.
+        let adminPanel = document.getElementById("adminPanel");
+        let adminLoginBox = document.getElementById("adminLogin");
+
+        if (adminPanel) adminPanel.style.display = "block";
+        if (adminLoginBox) adminLoginBox.style.display = "none";
+        let loginGate = document.getElementById("adminLoginGate");
+        if (loginGate) loginGate.style.display = "none";
+        await loadAdminReviewSetting();
 
     } catch (error) {
         console.error(error);
@@ -1225,6 +1423,10 @@ async function fetchStudentResults() {
 
 /* DELETE ALL QUESTIONS */
 async function deleteAllQuestions() {
+    if (!sessionStorage.getItem("adminPassword")) {
+        showMessage("Please log in as admin first.");
+        return;
+    }
     showConfirm(
         "Are you sure you want to delete ALL questions from the database?",
         async function () {
@@ -1247,8 +1449,7 @@ async function deleteAllQuestions() {
                     );
                 }
 
-                message.innerText =
-                    data.message || "All questions deleted in server";
+                if (message) message.innerText = data.message || "All questions deleted from server.";
                     checkQuestions();
                     setTimeout(function () {
                      location.reload();
@@ -1265,7 +1466,7 @@ async function deleteAllQuestions() {
                 showCorrectScreen();
 
             } catch (error) {
-                message.innerText = error.message;
+                if (message) message.innerText = error.message;
                 console.error(error);
             }
         }
@@ -1273,10 +1474,14 @@ async function deleteAllQuestions() {
 }
 
 async function deleteAllResults() {
+    if (!sessionStorage.getItem("adminPassword")) {
+        showMessage("Please log in as admin first.");
+        return;
+    }
     showConfirm(
         "Are you sure you want to delete ALL student results?",
         async function () {
-            let message = document.getElementById("deleteResultMessage");
+            let message = document.getElementById("resultsMessage");
 
             try {
                    let response = await fetch("/api/admin/results", {
@@ -1295,8 +1500,7 @@ async function deleteAllResults() {
                     );
                 }
 
-                message.innerText =
-                    data.message || "All student results deleted in server";
+                if (message) message.innerText = data.message || "All student results deleted from server.";
                     setTimeout(function () {
                        location.reload();
                                 }, 1000);
@@ -1315,3 +1519,17 @@ async function deleteAllResults() {
     );
 }
 
+
+function adminLogout() {
+    sessionStorage.removeItem("adminPassword");
+    let panel = document.getElementById("adminPanel");
+    let gate = document.getElementById("adminLoginGate");
+    let loginBox = document.getElementById("adminLogin");
+    if (panel) panel.style.display = "none";
+    if (gate) gate.style.display = "block";
+    if (loginBox) loginBox.style.display = "block";
+    let password = document.getElementById("adminPassword");
+    if (password) password.value = "";
+    let message = document.getElementById("adminMessage");
+    if (message) message.innerText = "Logged out successfully.";
+}

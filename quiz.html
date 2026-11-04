@@ -13,38 +13,42 @@
 
 <body>
 
+    <!-- Header -->
     <header style="background-color: aliceblue; padding: 10px;">
         <img
             src="./logo.svg"
             style="width: 170px; height: 35px; object-fit: contain; display: block;"
             alt="Quiz Logo"
         >
-        
     </header>
-  
-    
-<!-- Password Screen -->
-<div id="passwordScreen" style="display: none;">
 
-    <h3>Enter Test Password</h3>
-    <input
-    type="text"
-    id="studentName"
-    placeholder="Enter your full name"
-    required
-      >
-      
-    <input
-        type="password"
-        id="testPassword"
-        placeholder="Enter password"
-    >
 
-    <button onclick="verifyPassword()">Submit Password</button>
+    <!-- Password Screen -->
+    <div id="passwordScreen" style="display:none;">
 
-    <p id="passwordMessage" style="color: red;"></p>
+        <h3>Enter Test Password</h3>
 
-</div>
+        <input
+            type="text"
+            id="studentName"
+            placeholder="Enter your full name"
+            required
+        >
+
+        <input
+            type="password"
+            id="testPassword"
+            placeholder="Enter password"
+        >
+
+        <button type="button" onclick="verifyPassword()">
+            Submit Password
+        </button>
+
+        <p id="passwordMessage" style="color:red;"></p>
+
+    </div>
+
 
     <!-- Start Screen -->
     <div id="startScreen">
@@ -53,17 +57,21 @@
 
         <h1 id="displayQuizTitle"></h1>
 
-       <button onclick="showPasswordScreen()">Start Test</button>
+        <button type="button" onclick="showPasswordScreen()">
+            Start Test
+        </button>
 
-        </div>
+    </div>
+
 
     <!-- No Questions Message -->
-    <p id="noQuestions" style="display: none; color: red;">
-    
+    <p id="noQuestions" style="display:none; color:red;">
+        No questions available. Please contact the administrator.
     </p>
 
+
     <!-- Quiz Screen -->
-    <div id="quizScreen" style="display: none;">
+    <div id="quizScreen" style="display:none;">
 
         <p id="questionNumber"></p>
 
@@ -73,50 +81,119 @@
 
         <h3 id="feedback"></h3>
 
-        <button id="clearBtn" onclick="clearAnswer()" disabled>
+        <button
+            type="button"
+            id="clearBtn"
+            onclick="clearAnswer()"
+            disabled
+        >
             Clear
         </button>
 
-        <button id="submitBtn" onclick="checkAnswer()" disabled>
+        <button
+            type="button"
+            id="submitBtn"
+            onclick="checkAnswer()"
+            disabled
+        >
             Submit Answer
         </button>
-        <button id="previousBtn" onclick="previousQuestion()"style="display: none;">Previous </button>
 
-        <button id="nextBtn" onclick="nextQuestion()" style="display: none;">
+        <button
+            type="button"
+            id="previousBtn"
+            onclick="previousQuestion()"
+            style="display:none;"
+        >
+            Previous
+        </button>
+
+        <button
+            type="button"
+            id="nextBtn"
+            onclick="nextQuestion()"
+            style="display:none;"
+        >
             Next
         </button>
-      <button id="cancelBtn" onclick="cancelTest()" style="display: none;"> cancel test</button>
-    </div>
-    
-   <div id="confirmBox" style="display:none;">
-    <p id="confirmMessage"></p>
-    <button onclick="confirmYes()">Yes</button>
-    <button onclick="confirmNo()">No</button>
-</div>
 
-<div id="customMessage" style="display:none; text-align: center; ">
-    <p id="messageText"></p>
-    <button onclick="closeMessage()">OK</button>
-   </div>
-    <!-- Result Screen: Keep only ONE -->
-    <div id="resultScreen" style="display: none;">
-
-        <h1>Test Completed!</h1>
-
-        <h2 id="score"></h2>
-
-        <h3 id="percentage"></h3>
-
-        <p id="resultMessage"></p>
-
-        <h2>Answer Review</h2>
-
-        <div id="answerReview"></div>
-
-        <button onclick="restartQuiz()">Restart Quiz</button>
+        <button
+            type="button"
+            id="cancelBtn"
+            onclick="cancelTest()"
+            style="display:none;"
+        >
+            Cancel Test
+        </button>
 
     </div>
 
+
+    <!-- Confirmation Box -->
+    <div id="confirmBox" style="display:none;">
+
+        <p id="confirmMessage"></p>
+
+        <button type="button" onclick="confirmYes()">
+            Yes
+        </button>
+
+        <button type="button" onclick="confirmNo()">
+            No
+        </button>
+
+    </div>
+
+
+    <!-- Custom Message -->
+    <div id="customMessage" style="display:none; text-align:center;">
+
+        <p id="messageText"></p>
+
+        <button type="button" onclick="closeMessage()">
+            OK
+        </button>
+
+    </div>
+
+
+    <!-- Result Screen -->
+    <div id="resultScreen" style="display:none;">
+
+        <h2 id="resultMessage">Test Completed!</h2>
+
+        <div id="resultDetails">
+
+            <p>
+                Your Score:
+                <span id="finalScore"></span>
+            </p>
+
+            <p>
+                Percentage:
+                <span id="finalPercentage"></span>
+            </p>
+
+        </div>
+
+
+        <!-- Thank You Banner: Default -->
+        <div id="thankYouMessage" style="display:none;">
+
+            <h2>Thank You!</h2>
+
+            <p>Your test has been completed successfully.</p>
+
+            <p>Your answers have been submitted.</p>
+
+        </div>
+
+        <!-- Answer Review: Only when Admin enables it -->
+        <div id="answerReview" style="display:none;"></div>
+    </div>
+
+
+    <!-- JavaScript -->
     <script src="quiz.js"></script>
 
 </body>
