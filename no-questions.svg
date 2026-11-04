@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 360" role="img" aria-labelledby="title desc">
+  <title id="title">No questions available</title>
+  <desc id="desc">An empty clipboard with a question mark and a small plant.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eaf5ff"/><stop offset="1" stop-color="#f4f0ff"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f7fbff"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="260" cy="316" rx="145" ry="17" fill="#dce8f5" opacity=".75"/>
+  <circle cx="260" cy="166" r="142" fill="url(#bg)"/>
+  <circle cx="139" cy="95" r="8" fill="#b8d9fa"/>
+  <circle cx="383" cy="119" r="6" fill="#c9c1f5"/>
+  <path d="M164 90h154a17 17 0 0 1 17 17v174a17 17 0 0 1-17 17H164a17 17 0 0 1-17-17V107a17 17 0 0 1 17-17Z" fill="url(#paper)" stroke="#9bb9d8" stroke-width="5"/>
+  <path d="M214 88V76a18 18 0 0 1 18-18h20a18 18 0 0 1 18 18v12" fill="#d5e8fb" stroke="#7fa6ce" stroke-width="5" stroke-linecap="round"/>
+  <path d="M190 139h98M190 166h70M190 193h54" stroke="#c5d5e5" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="277" cy="224" r="34" fill="#e8e2ff"/>
+  <path d="M267 213a11 11 0 1 1 18 8c-6 5-8 7-8 14" fill="none" stroke="#7866c7" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="277" cy="247" r="4" fill="#7866c7"/>
+  <path d="M352 274c-2-22 8-39 28-47 4 19-5 36-28 47Z" fill="#7fc8a2" stroke="#4b9b78" stroke-width="3"/>
+  <path d="M354 287c3-19 15-31 34-33 0 19-12 31-34 33Z" fill="#a5dfb9" stroke="#4b9b78" stroke-width="3"/>
+  <path d="M350 294c4-17 13-30 28-42" fill="none" stroke="#4b9b78" stroke-width="3" stroke-linecap="round"/>
+  <path d="M126 258l10-10m-10 0 10 10M397 69l8-8m-8 0 8 8" stroke="#a9b9ed" stroke-width="4" stroke-linecap="round"/>
+</svg>

@@ -64,10 +64,12 @@
     </div>
 
 
-    <!-- No Questions Message -->
-    <p id="noQuestions" style="display:none; color:red;">
-        No questions available. Please contact the administrator.
-    </p>
+    <!-- Empty State: Shown when admin has not imported questions -->
+    <section id="noQuestions" class="empty-state" style="display:none;">
+        <img src="./no-questions.svg" alt="No questions available" class="empty-state-image">
+        <h2>No Questions Available In Server</h2>
+        <p id="noQuestionsText">please Contact your administrator.</p>
+    </section>
 
 
     <!-- Quiz Screen -->
