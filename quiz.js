@@ -1533,33 +1533,55 @@ function saveQuizTitle() {
    30. PARSE QUESTION TEXT
 ========================================= */
 
+
 function parseQuestionText(text) {
 
-    const blocks = text
+    // Convert text into individual non-empty lines.
+    const lines = text
         .replace(/\r/g, "")
-        .split(/\n\s*\n/)
-        .filter(function (block) {
-            return block.trim() !== "";
-        });
+        .split("\n")
+        .map(function (line) {
+            return line.trim();
+        })
+        .filter(Boolean);
+
+    const blocks = [];
+    let currentBlock = [];
+
+    // Start a new question whenever a numbered question begins.
+    lines.forEach(function (line) {
+
+        if (/^\d+\s*[.)]\s*/.test(line)) {
+
+            if (currentBlock.length > 0) {
+                blocks.push(currentBlock);
+            }
+
+            currentBlock = [line];
+
+        } else {
+
+            currentBlock.push(line);
+
+        }
+
+    });
+
+    if (currentBlock.length > 0) {
+        blocks.push(currentBlock);
+    }
 
     const validQuestions = [];
     const invalidBlocks = [];
 
     blocks.forEach(function (block, index) {
 
-        const lines = block
-            .split("\n")
-            .map(function (line) {
-                return line.trim();
-            })
-            .filter(Boolean);
-
         let question = "";
         let options = [];
         let answer = "";
         let imageUrl = "";
 
-        lines.forEach(function (line) {
+        block.forEach(function (line) {
 
             const optionMatch = line.match(
                 /^([A-Z])[.)\-:]\s*(.+)$/i
@@ -1590,13 +1612,12 @@ function parseQuestionText(text) {
 
             } else {
 
-                question += (question ? " " : "") + line;
+                question += (question ? " " : "") +
+                    line.replace(/^\d+\s*[.)]\s*/, "");
 
             }
 
         });
-
-        question = question.replace(/^\d+[.)]\s*/, "");
 
         const optionLetters = new Set(
             options.map(function (option) {
@@ -1632,7 +1653,6 @@ function parseQuestionText(text) {
     };
 
 }
-
 
 /* =========================================
    31. UPLOAD QUESTIONS TO SERVER
@@ -1798,6 +1818,113 @@ async function importTypedQuestions() {
 }
 
 
+/* =========================================
+   QUESTION IMAGE PASTE UPLOAD
+========================================= */
+
+const typedQuestionBox = document.getElementById("typedQuestions");
+
+if (typedQuestionBox) {
+
+    // Create upload status message
+    const imageStatus = document.createElement("p");
+
+    imageStatus.id = "imagePasteStatus";
+    imageStatus.style.fontSize = "14px";
+    imageStatus.style.marginTop = "8px";
+
+    typedQuestionBox.insertAdjacentElement(
+        "afterend",
+        imageStatus
+    );
+
+    // Detect pasted images
+    typedQuestionBox.addEventListener("paste", async function (event) {
+
+        const items = event.clipboardData.items;
+
+        let imageFile = null;
+
+        for (let i = 0; i < items.length; i++) {
+
+            if (items[i].type.startsWith("image/")) {
+
+                imageFile = items[i].getAsFile();
+                break;
+
+            }
+
+        }
+
+        // Normal text paste continues as usual
+        if (!imageFile) {
+            return;
+        }
+
+        event.preventDefault();
+
+        imageStatus.textContent = "Uploading image...";
+        imageStatus.style.color = "blue";
+
+        try {
+
+            const formData = new FormData();
+
+            formData.append("image", imageFile);
+
+            // Keep admin authentication, but remove JSON Content-Type
+            const headers = getAdminHeaders();
+
+            delete headers["Content-Type"];
+            delete headers["content-type"];
+
+            const response = await fetch(
+                "/api/admin/upload-image",
+                {
+                    method: "POST",
+                    headers: headers,
+                    body: formData
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+
+                throw new Error(
+                    data.message || "Image upload failed."
+                );
+
+            }
+
+            // Insert permanent image URL at cursor position
+            const imageText = "\nIMAGE: " + data.imageUrl + "\n";
+
+            const start = typedQuestionBox.selectionStart;
+            const end = typedQuestionBox.selectionEnd;
+
+            typedQuestionBox.setRangeText(
+                imageText,
+                start,
+                end,
+                "end"
+            );
+
+            imageStatus.textContent = "Image uploaded successfully!";
+            imageStatus.style.color = "green";
+
+        } catch (error) {
+
+            console.error(error);
+
+            imageStatus.textContent = error.message;
+            imageStatus.style.color = "red";
+
+        }
+
+    });
+
+}
 /* =========================================
    34. UPDATE QUESTION COUNT
 ========================================= */

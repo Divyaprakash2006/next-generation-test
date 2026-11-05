@@ -9,6 +9,8 @@ const dotenv = require("dotenv");
 const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
 
 dotenv.config();
 
@@ -221,6 +223,127 @@ function checkStudent(req, res, next) {
 }
 
 
+/* =========================================
+   CLOUDINARY CONFIGURATION
+========================================= */
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+console.log("Cloudinary Configuration:");
+console.log("Cloud Name:", cloudinary.config().cloud_name);
+console.log("API Key Loaded:", Boolean(cloudinary.config().api_key));
+console.log("API Secret Loaded:", Boolean(cloudinary.config().api_secret));
+
+if (
+    !cloudinary.config().cloud_name ||
+    !cloudinary.config().api_key ||
+    !cloudinary.config().api_secret
+) {
+    console.log("ERROR: Cloudinary credentials are missing.");
+}
+
+/* =========================================
+   CLOUDINARY IMAGE UPLOAD FUNCTION
+========================================= */
+
+function uploadImageToCloudinary(buffer) {
+    return new Promise(function (resolve, reject) {
+
+        cloudinary.uploader.upload_stream(
+            {
+                folder: "quiz-question-images",
+                resource_type: "image"
+            },
+            function (error, result) {
+
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(result);
+                }
+
+            }
+        ).end(buffer);
+
+    });
+}
+
+
+
+const imageUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5 MB
+    },
+    fileFilter: function (req, file, cb) {
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif"
+        ];
+
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error("Only JPG, PNG, WEBP and GIF images are allowed."));
+        }
+    }
+});
+app.post(
+    "/api/admin/upload-image",
+    checkAdmin,
+    function (req, res, next) {
+
+        imageUpload.single("image")(req, res, async function (error) {
+
+            if (error) {
+                return res.status(400).json({
+                    success: false,
+                    message: error.message
+                });
+            }
+
+            try {
+
+                if (!req.file) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Please paste an image."
+                    });
+                }
+
+                const result = await uploadImageToCloudinary(
+                    req.file.buffer
+                );
+
+                res.json({
+                    success: true,
+                    imageUrl: result.secure_url
+                });
+
+            } catch (error) {
+    console.log("\n========== CLOUDINARY DEBUG ==========");
+    console.dir(error, { depth: 10 });
+    console.log("HTTP Status:", error.http_code);
+    console.log("Response:", error.response);
+    console.log("======================================");
+
+    res.status(500).json({
+        success: false,
+        message: error.message,
+        status: error.http_code || null
+    });
+}
+
+        });
+
+    }
+);
 /* =========================================
    8. ADMIN LOGIN API
 ========================================= */

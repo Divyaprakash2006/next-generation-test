@@ -317,10 +317,8 @@ body.quiz-active .quiz-top-bar {
     width: auto;
     height: auto;
     object-fit: contain;
-    border: 1px solid #ddd;
-    border-radius: 6px;
     padding: 4px;
-    background-color: white;
+    
 }
 
 
