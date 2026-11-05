@@ -6,191 +6,411 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Simple Quiz Test</title>
+    <title>Student Quiz</title>
 
     <link rel="stylesheet" href="quiz.css">
+
+    <script src="quiz.js" defer></script>
 </head>
 
 <body>
 
-    <!-- Header -->
-    <header style="background-color: aliceblue; padding: 10px;">
-        <img
-            src="./logo.svg"
-            style="width: 170px; height: 35px; object-fit: contain; display: block;"
-            alt="Quiz Logo"
-        >
+    <!-- =====================================
+         1. HEADER
+    ====================================== -->
+
+    <header class="quiz-header">
+
+        <div class="header-left">
+
+            <img
+                src="./logo.svg"
+                alt="Quiz Logo"
+                class="logo"
+            >
+
+        </div>
+
     </header>
 
 
-    <!-- Password Screen -->
-    <div id="passwordScreen" style="display:none;">
+    <main class="quiz-container">
 
-        <h3>Enter Test Password</h3>
 
-        <input
-            type="text"
-            id="studentName"
-            placeholder="Enter your full name"
-            required
+        <!-- =====================================
+             2. QUIZ START SCREEN
+        ====================================== -->
+
+        <section id="startScreen" class="quiz-box">
+
+            <h2 id="displayQuizTitle">
+                Welcome to Online Assessment
+            </h2>
+
+            <p>
+                Read the instructions before starting your test.
+            </p>
+
+            <ul class="quiz-instructions">
+                <li>Use your registered roll number and password.</li>
+                <li>Select one answer for every question.</li>
+                <li>Use the question palette to navigate.</li>
+                <li>Submit all answers to complete your test.</li>
+            </ul>
+
+            <button onclick="showPasswordScreen()">
+                Start Test
+            </button>
+
+        </section>
+
+
+        <!-- =====================================
+             3. STUDENT LOGIN SCREEN
+        ====================================== -->
+
+        <section
+            id="passwordScreen"
+            class="quiz-box"
+            style="display:none;"
         >
 
-        <input
-            type="password"
-            id="testPassword"
-            placeholder="Enter password"
+            <h2>User Login</h2>
+
+            <p>Enter your registered student details.</p>
+
+            <input
+                type="text"
+                id="studentRollNumber"
+                placeholder="Enter Roll Number"
+                autocomplete="username"
+            >
+
+            <input
+                type="password"
+                id="testPassword"
+                placeholder="Enter Password"
+                autocomplete="current-password"
+            >
+
+            <button onclick="verifyPassword()">
+                Login and Start Test
+            </button>
+
+            <p
+                id="passwordMessage"
+                class="message"
+            ></p>
+
+        </section>
+
+
+        <!-- =====================================
+             4. NO QUESTIONS SCREEN
+        ====================================== -->
+
+        <section
+            id="noQuestions"
+            class="empty-state"
+            style="display:none;"
         >
 
-        <button type="button" onclick="verifyPassword()">
-            Submit Password
-        </button>
+            <img
+                src="./no-questions.svg"
+                alt="No Questions Available"
+            >
 
-        <p id="passwordMessage" style="color:red;"></p>
+            <h2>No Questions Available</h2>
 
-    </div>
+            <p id="noQuestionsText">
+                Please contact your administrator.
+            </p>
 
-
-    <!-- Start Screen -->
-    <div id="startScreen">
-
-        <p>Test your knowledge!</p>
-
-        <h1 id="displayQuizTitle"></h1>
-
-        <button type="button" onclick="showPasswordScreen()">
-            Start Test
-        </button>
-
-    </div>
+        </section>
 
 
-    <!-- Empty State: Shown when admin has not imported questions -->
-    <section id="noQuestions" class="empty-state" style="display:none;">
-        <img src="./no-questions.svg" alt="No questions available" class="empty-state-image">
-        <h2>No Questions Available In Server</h2>
-        <p id="noQuestionsText">please Contact your administrator.</p>
-    </section>
+        <!-- =====================================
+             5. QUIZ SCREEN
+        ====================================== -->
 
+        <section
+            id="quizScreen"
+            style="display:none;"
+        >
 
-    <!-- Quiz Screen -->
-   <div id="quizScreen" style="display:none;">
+            <div class="quiz-top-bar">
 
-    <div class="quiz-layout">
+                <div>
+                    <h2 id="quizHeading">
+                        Online Assessment
+                    </h2>
 
-        <!-- LEFT SIDE: QUESTION -->
-        <div class="quiz-main">
+                    <p id="studentDisplay"></p>
+                </div>
 
-            <h3 id="questionNumber"></h3>
-
-            <div id="question"></div>
-
-            <div id="options"></div>
-
-            <p id="feedback"></p>
-
-            <div class="question-actions">
-                
-                <button id="clearBtn"onclick="clearAnswer()">Clear Response</button>
-
-                <button id="saveNextBtn" onclick="saveAndNext()" disabled>
-                    Save & Next
+                <button
+                    id="cancelBtn"
+                    class="danger-button"
+                    onclick="cancelTest()"
+                >
+                    Cancel Test
                 </button>
+
+            </div>
+
+
+            <!-- QUIZ LAYOUT -->
+
+            <div class="quiz-layout">
+
+
+                <!-- =================================
+                     5A. QUESTION AREA
+                ================================== -->
+
+                <div class="quiz-main">
+
+                    <div class="question-header">
+
+                        <h3 id="questionNumber">
+                            Question 1
+                        </h3>
+
+                    </div>
+
+
+                    <!-- QUESTION TEXT -->
+
+                    <div
+                        id="question"
+                        class="question-text"
+                    ></div>
+
+
+                    <!-- QUESTION IMAGE -->
+
+                    <div
+                        id="questionImageContainer"
+                        class="question-image-container"
+                        style="display:none;"
+                    >
+
+                        <img
+                            id="questionImage"
+                            src=""
+                            alt="Question Image"
+                        >
+
+                    </div>
+
+
+                    <!-- ANSWER OPTIONS -->
+
+                    <div
+                        id="options"
+                        class="options"
+                    ></div>
+
+
+                    <!-- FEEDBACK -->
+
+                    <p
+                        id="feedback"
+                        class="feedback"
+                    ></p>
+
+
+                    <!-- QUESTION ACTIONS -->
+
+                    <div class="question-actions">
+
+    
+
+                        <button
+                            id="clearBtn"
+                            onclick="clearAnswer()"
+                            disabled
+                        >
+                            Clear Response
+                        </button>
+
+                        <button  
+                            id="saveNextBtn"
+                            onclick="saveAndNext()"
+                            disabled
+                        >
+                            Save & Next
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================
+                     5B. QUESTION PALETTE
+                ================================== -->
+
+              <aside class="question-palette">
+
+    <div class="palette-header">
+        <h3>Question Palette</h3>
+        <span id="palettePageInfo">1–12 / 100</span>
+    </div>
+
+    <div id="paletteButtons" class="palette-buttons">
+        <!-- Question numbers generated by JavaScript -->
+    </div>
+
+    <div class="palette-navigation">
+
+        <button
+            type="button"
+            id="previousPaletteBtn"
+            onclick="previousPalettePage()">
+            &#10094;
+        </button>
+
+        <span id="palettePageNumber">1 / 9</span>
+
+        <button
+            type="button"
+            id="nextPaletteBtn"
+            onclick="nextPalettePage()">
+            &#10095;
+        </button>
+
+    </div>
+
+    <div class="palette-legend">
+        <div><span class="legend-box current"></span> Current</div>
+        <div><span class="legend-box answered"></span> Answered</div>
+        <div><span class="legend-box unanswered"></span> Unanswered</div>
+    </div>
+
+</aside>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================
+             6. RESULT SCREEN
+        ====================================== -->
+
+        <section
+            id="resultScreen"
+            class="result-screen"
+            style="display:none;"
+        >
+
+            <div class="result-card">
+
+                <h2>Quiz Completed!</h2>
+
+                <p id="resultMessage">
+                    Your test has been completed.
+                </p>
+
+
+                <div class="result-details">
+
+                    <div class="result-item">
+
+                        <span>Score</span>
+
+                        <h2 id="finalScore">
+                            0 / 0
+                        </h2>
+
+                    </div>
+
+
+                    <div class="result-item">
+
+                        <span>Percentage</span>
+
+                        <h2 id="finalPercentage">
+                            0%
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+                <!-- THANK YOU MESSAGE -->
+
+                <div
+                    id="thankYouMessage"
+                    style="display:none;"
+                >
+
+                    <h3>Thank You!</h3>
+
+                    <p>
+                        Your answers have been submitted successfully.
+                    </p>
+
+                </div>
+
+                <!-- ANSWER REVIEW -->
+
+                <div
+                    id="answerReview"
+                    style="display:none;"
+                >
+
+                    <h3>Answer Review</h3>
+
+                    <div id="answerReviewContent"></div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+    </main>
+
+
+    <!-- =====================================
+         7. CONFIRMATION BOX
+    ====================================== -->
+
+    <div
+        id="confirmBox"
+        class="confirm-box"
+        style="display:none;"
+    >
+
+        <div class="confirm-content">
+
+            <h3>Confirmation</h3>
+
+            <p id="customMessage">
+                Are you sure?
+            </p>
+
+            <div class="confirm-buttons">
+
+                <button onclick="confirmYes()">
+                    Yes
+                </button>
+
+                <button onclick="confirmNo()">
+                    Cancel
+                </button>
+
             </div>
 
         </div>
 
-        <!-- RIGHT SIDE: QUESTION PALETTE -->
-        <div class="question-palette">
-
-            <h3>Questions</h3>
-
-            <div id="paletteButtons"></div>
-
-        </div>
-
     </div>
 
- </div>
-
-
-        <button
-            type="button"
-            id="cancelBtn"
-            onclick="cancelTest()"
-            style="display:none;"
-        >
-            Cancel Test
-        </button>
-
-    </div>
-
-
-    <!-- Confirmation Box -->
-    <div id="confirmBox" style="display:none;">
-
-        <p id="confirmMessage"></p>
-
-        <button type="button" onclick="confirmYes()">
-            Yes
-        </button>
-
-        <button type="button" onclick="confirmNo()">
-            No
-        </button>
-
-    </div>
-
-
-    <!-- Custom Message -->
-    <div id="customMessage" style="display:none; text-align:center;">
-
-        <p id="messageText"></p>
-
-        <button type="button" onclick="closeMessage()">
-            OK
-        </button>
-
-    </div>
-
-
-    <!-- Result Screen -->
-    <div id="resultScreen" style="display:none;">
-
-        <h2 id="resultMessage">Test Completed!</h2>
-
-        <div id="resultDetails">
-
-            <p>
-                Your Score:
-                <span id="finalScore"></span>
-            </p>
-
-            <p>
-                Percentage:
-                <span id="finalPercentage"></span>
-            </p>
-
-        </div>
-
-
-        <!-- Thank You Banner: Default -->
-        <div id="thankYouMessage" style="display:none;">
-
-            <h2>Thank You!</h2>
-
-            <p>Your test has been completed successfully.</p>
-
-            <p>Your answers have been submitted.</p>
-
-        </div>
-
-        <!-- Answer Review: Only when Admin enables it -->
-        <div id="answerReview" style="display:none;"></div>
-    </div>
-
-
-    <!-- JavaScript -->
-    <script src="quiz.js"></script>
 
 </body>
+
 </html>

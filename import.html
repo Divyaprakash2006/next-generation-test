@@ -1,84 +1,424 @@
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Quiz Admin Dashboard</title>
+
     <link rel="stylesheet" href="quiz.css">
+
     <script src="quiz.js" defer></script>
 </head>
-<body class="admin-page">
-    <header class="site-header">
-        <img src="./logo.svg" alt="Quiz Logo" class="site-logo">
+
+<body>
+
+    <!-- =====================================
+         1. HEADER
+    ====================================== -->
+
+    <header class="admin-header">
+
+        <div class="header-left">
+            <img src="./logo.svg" alt="Quiz Logo" class="logo">
+        </div>
+
         <a href="/" class="student-link">Student Quiz</a>
+
     </header>
 
-    <main class="import-container">
-        <section id="adminLoginGate" class="import-card login-card">
-            <h1>Admin Login</h1>
-            <p>Enter the administrator password to open the quiz management dashboard.</p>
-            <div id="adminLogin">
-                <label for="adminPassword">Admin Password</label>
-                <input type="password" id="adminPassword" placeholder="Enter admin password" autocomplete="current-password">
-                <button type="button" onclick="adminLogin()">Login to Admin Page</button>
-                <p id="adminMessage" class="message" role="status"></p>
-            </div>
+
+    <main class="admin-container">
+
+        <!-- =====================================
+             2. ADMIN LOGIN
+        ====================================== -->
+
+        <section id="adminLoginGate" class="admin-login-card">
+
+            <h2>Admin Login</h2>
+
+            <p>Enter your admin password to continue.</p>
+
+            <input
+                type="password"
+                id="adminPassword"
+                placeholder="Enter admin password"
+            >
+
+            <button onclick="adminLogin()">
+                Login
+            </button>
+
+            <p id="adminMessage" class="message"></p>
+
         </section>
 
-        <div id="adminPanel" style="display:none;">
-            <div class="dashboard-heading">
-                <div><h1>Quiz Admin Dashboard</h1><p>Manage questions, student results and review permissions.</p></div>
-                <button type="button" class="logout-button" onclick="adminLogout()">Logout</button>
+
+        <!-- =====================================
+             3. ADMIN PANEL
+        ====================================== -->
+
+        <section id="adminPanel" style="display:none;">
+
+            <div class="admin-title-row">
+
+                <div>
+                    <h2>Welcome Admin</h2>
+                    <p>Manage your quiz and students.</p>
+                </div>
+
+                <button
+                    class="logout-button"
+                    onclick="adminLogout()"
+                >
+                    Logout
+                </button>
+
             </div>
 
+
+            <!-- =====================================
+                 4. QUIZ TITLE
+            ====================================== -->
+
             <section class="import-card">
-                <h2>Import Questions From Text File</h2>
-                <label for="questionFile">Choose Question File (.txt)</label>
-                <input type="file" id="questionFile" accept=".txt,text/plain">
-                <button type="button" onclick="importQuestions()">Import File and Upload</button>
+
+                <h3>Quiz Title Settings</h3>
+
+                <input
+                    type="text"
+                    id="quizTitle"
+                    placeholder="Enter quiz title"
+                >
+
+                <button onclick="saveQuizTitle()">
+                    Save Quiz Title
+                </button>
+
+                <p id="titleMessage" class="message"></p>
+
+            </section>
+
+
+            <!-- =====================================
+                 5. IMPORT QUESTIONS FROM TXT
+            ====================================== -->
+
+            <section class="import-card">
+
+                <h3>Import Questions from TXT File</h3>
+
+                <p>
+                    Select a text file containing your quiz questions.
+                </p>
+
+                <input
+                    type="file"
+                    id="questionFile"
+                    accept=".txt"
+                >
+
+                <p id="fileName"></p>
+
+                <button onclick="importQuestions()">
+                    Import Questions
+                </button>
+
                 <p id="importMessage" class="message"></p>
+
             </section>
 
+
+            <!-- =====================================
+                 6. MANUAL QUESTION IMPORT
+            ====================================== -->
+
             <section class="import-card">
-                <h2>Type Questions Manually</h2>
-                <textarea id="typedQuestions" rows="12" placeholder="Enter each question, options and ANSWER line. Separate questions with a blank line."></textarea>
-                <button type="button" onclick="importTypedQuestions()">Prepare and Upload Typed Questions</button>
+
+                <h3>Manually Add Questions</h3>
+
+                <p>
+                    Paste your questions using the supported format.
+                </p>
+
+                <textarea
+                    id="typedQuestions"
+                    rows="12"
+                    placeholder="1. What is HTML?
+
+A. Programming language
+B. Markup language
+C. Database
+D. Operating system
+
+ANSWER: B"
+                ></textarea>
+
+                <button onclick="importTypedQuestions()">
+                    Import Typed Questions
+                </button>
+
                 <p id="typedImportMessage" class="message"></p>
+
             </section>
+
+
+            <!-- =====================================
+                 7. QUESTION MANAGEMENT
+            ====================================== -->
 
             <section class="import-card">
-                <h2>Question Management</h2>
-                <p>Prepared Questions: <strong id="questionCount">0</strong></p>
-                <p id="uploadMessage" class="message">Import questions before uploading.</p>
-                <button type="button" class="danger-button" onclick="deleteAllQuestions()">Delete All Server Questions</button>
+
+                <h3>Question Management</h3>
+
+                <p>
+                    Total Questions:
+                    <strong id="questionCount">0</strong>
+                </p>
+
+                <button
+                    class="danger-button"
+                    onclick="deleteAllQuestions()"
+                >
+                    Delete All Questions
+                </button>
+
+                <p id="uploadMessage" class="message"></p>
+
             </section>
+
+
+            <!-- =====================================
+                 8. ADD STUDENT MANUALLY
+            ====================================== -->
 
             <section class="import-card">
-                <h2>Student Answer Review Permission</h2>
-                <p>When enabled, students can see their answer review after submitting the test. When disabled, they see the Thank You banner.</p>
-                <p id="reviewStatus" class="status-text">Loading permission...</p>
-                <button type="button" id="reviewToggleBtn" onclick="toggleStudentReview()">Enable Student Review</button>
-                <p id="reviewSettingMessage" class="message" role="status"></p>
+
+                <h3>Add Student Manually</h3>
+
+                <p>
+                    Register one student using their roll number and password.
+                </p>
+
+                <input
+                    type="text"
+                    id="newStudentRollNumber"
+                    placeholder="Enter student roll number"
+                >
+
+                <input
+                    type="password"
+                    id="newStudentPassword"
+                    placeholder="Enter student password"
+                >
+
+                <button onclick="addStudent()">
+                    Add Student
+                </button>
+
+                <p id="studentAddMessage" class="message"></p>
+
             </section>
+
+
+            <!-- =====================================
+                 9. IMPORT STUDENTS FROM CSV
+            ====================================== -->
 
             <section class="import-card">
-                <h2>Student Quiz Results</h2>
-                <button type="button" onclick="fetchStudentResults()">View Student Results</button>
-                <button type="button" class="danger-button" onclick="deleteAllResults()">Delete All Results</button>
-                <p id="resultsMessage" class="message" role="status"></p>
-                <div id="studentResults"></div>
+
+                <h3>Import Students from CSV</h3>
+
+                <p>
+                    Upload a CSV file containing student roll numbers and passwords.
+                </p>
+
+                <p>
+                    Required CSV columns:
+                    <strong>Roll Number</strong> and
+                    <strong>Password</strong>.
+                </p>
+
+                <button
+                    type="button"
+                    onclick="downloadStudentCSVTemplate()"
+                >
+                    Download CSV Template
+                </button>
+
+                <input
+                    type="file"
+                    id="studentCSVFile"
+                    accept=".csv,text/csv"
+                >
+
+                <button onclick="importStudentsCSV()">
+                    Import Students
+                </button>
+
+                <p id="studentImportMessage" class="message"></p>
+
             </section>
 
-            <div id="confirmBox" style="display:none;">
-                <p id="confirmMessage"></p>
-                <button type="button" onclick="confirmYes()">Yes</button>
-                <button type="button" onclick="confirmNo()">No</button>
-            </div>
-            <div id="customMessage" style="display:none; text-align:center;">
-                <p id="messageText"></p>
-                <button type="button" onclick="closeMessage()">OK</button>
-            </div>
-        </div>
+
+            <!-- =====================================
+                 10. STUDENT MANAGEMENT
+            ====================================== -->
+
+            <section class="import-card">
+
+                <div class="section-heading">
+
+                    <h3>Registered Students</h3>
+
+                    <button onclick="fetchStudents()">
+                        Refresh Students
+                    </button>
+
+                </div>
+
+                <p id="studentCount">
+                    Total Students: 0
+                </p>
+
+                <div class="table-container">
+
+                    <table class="admin-table">
+
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Roll Number</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="studentList">
+
+                            <tr>
+                                <td colspan="4">
+                                    No students loaded.
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <p id="studentListMessage" class="message"></p>
+
+            </section>
+
+
+            <!-- =====================================
+                 11. STUDENT ANSWER REVIEW SETTINGS
+            ====================================== -->
+
+            <section class="import-card">
+
+                <h3>Student Answer Review Permission</h3>
+
+                <p>
+                    Allow students to view their correct answers after completing
+                    the quiz.
+                </p>
+
+                <p>
+                    Current Status:
+                    <strong id="reviewStatus">Loading...</strong>
+                </p>
+
+                <button
+                    id="reviewToggleBtn"
+                    onclick="toggleStudentReview()"
+                >
+                    Change Review Permission
+                </button>
+
+                <p id="reviewSettingMessage" class="message"></p>
+
+            </section>
+
+
+            <!-- =====================================
+                 12. STUDENT RESULTS
+            ====================================== -->
+
+            <section class="import-card">
+
+                <div class="section-heading">
+
+                    <h3>Student Quiz Results</h3>
+
+                    <button onclick="fetchStudentResults()">
+                        Refresh Results
+                    </button>
+
+                </div>
+
+                <button
+                    class="danger-button"
+                    onclick="deleteAllResults()"
+                >
+                    Delete All Results
+                </button>
+
+                <p id="resultsMessage" class="message"></p>
+
+                <div
+                    id="studentResults"
+                    class="table-container"
+                >
+                    No results loaded.
+                </div>
+
+            </section>
+
+        </section>
+
     </main>
+
+
+    <!-- =====================================
+         13. CONFIRMATION BOX
+    ====================================== -->
+
+    <div
+        id="confirmBox"
+        class="confirm-box"
+        style="display:none;"
+    >
+
+        <div class="confirm-content">
+
+            <h3>Confirmation</h3>
+
+            <p id="customMessage">
+                Are you sure?
+            </p>
+
+            <div class="confirm-buttons">
+
+                <button onclick="confirmYes()">
+                    Yes
+                </button>
+
+                <button onclick="confirmNo()">
+                    Cancel
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
 </body>
+
 </html>

@@ -1,686 +1,1020 @@
+
+/* =========================================
+   1. GLOBAL STYLES
+========================================= */
+
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: Arial, sans-serif;
     background-color: lightblue;
     margin: 0;
-    padding: 20px;
-}
-
-.quiz-box {
-    background-color: lightblue;
-    width: 500px;
-    max-width: 100%;
-    box-sizing: border-box;
-    margin: 20px 0;
-    padding: 25px;
-    border-radius: 10px;
-    text-align: left;
-}
-
-h1 {
-    color: black;
-    font-size: medium;
-    text-align: left;
-}
-
-#quizScreen {
-    width: 100%;
-    text-align: left;
-}
-
-#questionNumber {
-    font-size: 16px;
-    text-align: left;
-}
-
-#question {
-    font-size: 20px;
-    line-height: 1.4;
-    text-align: left;
-    margin: 20px 0;
-}
-
-#options {
-    margin: 15px 0;
-}
-
-#options label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 18px;
-    margin: 15px 0;
-    cursor: pointer;
-}
-
-#options input[type="radio"] {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-}
-
-#feedback {
-    font-size: 17px;
-    font-weight: bold;
-    text-align: left;
-    margin: 20px 0;
-}
-
-button {
-    background-color: rgb(0, 174, 255);
-    color: white;
-    padding: 10px;
-    border: none;
-    border-radius: 7px;
-    font-size: 16px;
-    cursor: pointer;
-}
-
-#submitBtn,
-#nextBtn {
-    display: inline-block;
-    margin: 10px 10px 10px 0;
-}
-
-@media screen and (max-width: 600px) {
-    body {
-        padding: 10px;
-    }
-
-    .quiz-box {
-        width: 100%;
-        margin: 10px 0;
-        padding: 15px;
-    }
-
-    #question {
-        font-size: 20px;
-    }
-
-    #options label {
-        font-size: 16px;
-    }
-}
-
-#resultScreen {
-    display: none;
-    background: white;
-    color: black;
-    padding: 25px;
-    min-height: 100vh;
-}
-
-#answerReview {
-    display: block;
-    width: 100%;
-}
-
-.review-card {
-    background: #f5f5f5;
-    color: black;
-    padding: 18px;
-    margin: 15px 0;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-}
-
-.correct {
-    color: green;
-}
-
-.wrong {
-    color: red;
-}
-
-#passwordScreen {
-    width: 350px;
-    max-width: 100%;
-    margin: 10px 0;
-    padding: 10px;
-    display: block;
-    box-sizing: border-box;
-    text-align: left;
-}
-
-#passwordScreen h2,
-#passwordScreen h3 {
-    position: static;
-    width: 100%;
-    margin: 0 0 12px 0;
-    padding: 0;
-    text-align: left;
-    box-sizing: border-box;
-}
-
-#studentName,
-#testPassword {
-    display: block;
-    width: 220px;
-    max-width: 100%;
-    height: 42px;
-    margin-bottom: 10px;
-    padding: 10px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 16px;
-}
-
-#studentName:focus,
-#testPassword:focus {
-    outline: 2px solid #00aaff;
-    border-color: #00aaff;
-}
-
-#passwordScreen button {
-    display: block;
-    width: 150px;
-    margin: 0;
-    padding: 10px;
-}
-
-#passwordMessage {
-    margin-top: 8px;
-}
-
-/* Import page */
-.import-container {
-    width: 90%;
-    max-width: 850px;
-    margin: 30px auto;
-    font-family: Arial, sans-serif;
+    padding: 15px;
     color: #222;
 }
 
-.import-container > h1 {
-    text-align: center;
-    color: #173b67;
+button,
+input,
+textarea {
+    font-family: Arial, sans-serif;
 }
 
-.import-container > p {
-    text-align: center;
-    color: #555;
+button {
+    border: none;
+    padding: 9px 15px;
+    border-radius: 5px;
+    background-color: #0877d1;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s;
 }
 
-.import-card {
-    background: #ffffff;
-    padding: 22px;
-    margin: 22px 0;
-    border: 1px solid #d8e0ea;
-    border-radius: 10px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+button:hover {
+    background-color: #005eaa;
 }
 
-.import-card h2 {
+button:disabled {
+    background-color: #aeb8c2;
+    cursor: not-allowed;
+}
+
+input,
+textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+    border: 1px solid #b8c5d0;
+    font-size: 14px;
+}
+
+textarea {
+    resize: vertical;
+}
+
+h2, h3, p {
     margin-top: 0;
-    color: #173b67;
+}
+
+
+/* =========================================
+   2. HEADER
+========================================= */
+
+.quiz-header,
+.admin-header {
+    background-color: aliceblue;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-left h2 {
+    margin: 0;
     font-size: 21px;
 }
 
-.import-card label {
-    display: block;
-    margin: 12px 0 8px;
+.logo {
+    width: 152px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.student-link {
+    color: #0877d1;
+    text-decoration: none;
     font-weight: bold;
 }
 
-.import-card input[type="text"],
-.import-card input[type="password"],
-.import-card input[type="file"],
-.import-card textarea {
+
+/* =========================================
+   3. MAIN CONTAINERS
+========================================= */
+
+.quiz-container {
     width: 100%;
-    box-sizing: border-box;
-    padding: 12px;
-    margin-bottom: 12px;
-    border: 1px solid #bbb;
-    border-radius: 6px;
-    font-size: 15px;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
-.import-card textarea {
-    resize: vertical;
-    font-family: Arial, sans-serif;
-    line-height: 1.6;
+.admin-container {
+    width: 100%;
+    max-width: 1100px;
+    margin: auto;
 }
 
-.import-card button {
-    background: #1769aa;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 11px 17px;
-    margin: 5px 5px 5px 0;
-    cursor: pointer;
-    font-size: 15px;
+.quiz-box {
+    background-color: white;
+    width: 100%;
+    max-width: 550px;
+    margin: 30px auto;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+    text-align: center;
 }
 
-.import-card button:hover {
-    background: #104d80;
+.quiz-box h2 {
+    margin-bottom: 15px;
 }
 
-.admin-card {
-    border-top: 4px solid #1769aa;
+.quiz-box button {
+    margin-top: 12px;
 }
 
-.logout-button {
-    background: #666 !important;
+
+/* =========================================
+   4. INSTRUCTIONS AND MESSAGES
+========================================= */
+
+.quiz-instructions {
+    text-align: left;
+    line-height: 1.9;
+    margin: 20px 0;
+    padding-left: 25px;
 }
 
 .message {
     margin-top: 12px;
+    font-size: 14px;
+    color: #075b9e;
     overflow-wrap: anywhere;
 }
 
-.import-footer {
-    text-align: center;
-    margin: 25px 0;
-}
-
-.import-footer a {
-    color: #1769aa;
-    text-decoration: none;
+.feedback {
+    margin-top: 8px;
     font-weight: bold;
+    color: #c0392b;
 }
 
-/* Mobile responsive */
-@media (max-width: 600px) {
-    .import-container {
-        width: 94%;
-        margin: 15px auto;
-    }
 
-    .import-card {
-        padding: 15px;
-        margin: 15px 0;
-    }
+/* =========================================
+   5. EMPTY STATE
+========================================= */
 
-    .import-card button {
-        width: 100%;
-        margin: 5px 0;
-    }
-}
-
-#cancelBtn {
-    position: absolute;
-    top: 26px;
-    right: 20px;
-    color: black;
-    border: none;
-    font-family: Georgia, 'Times New Roman', Times, serif;
-    background-color: aliceblue;
-    padding: 10px 18px;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    text-align: center;
-}
-
-#customMessage {
-    position: fixed;
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 20px;
-    border: 1px solid #ccc;
+.empty-state {
+    background-color: white;
+    padding: 35px;
     border-radius: 10px;
-    box-shadow: 0 4px 15px #999;
-    z-index: 9999;
-}
-
-#confirmBox {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 0 15px #888;
-    z-index: 9999;
     text-align: center;
-}
-
-#confirmBox button {
-    padding: 8px 20px;
-    margin: 5px;
-    cursor: pointer;
-}
-
-#thankYouMessage {
-    text-align: center;
-    padding: 30px;
-    margin: 20px auto;
-    background: #e8f5e9;
-    border-radius: 10px;
-}
-
-#thankYouMessage h2 {
-    color: #198754;
-}
-
-#thankYouMessage h3 {
-    color: #333;
-}
-
-/* Updated admin dashboard and result layout */
-.site-header {
-    background: aliceblue;
-    padding: 10px 18px;
-    display: flex;
+    max-width: 600px;
+    margin: 30px auto;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
 }
 
-.site-logo {
-    width: 170px;
-    height: 35px;
+.empty-state img {
+    width: 160px;
+    max-width: 100%;
     object-fit: contain;
-    display: block;
 }
 
-.student-link {
-    color: #1769aa;
-    font-weight: bold;
-    text-decoration: none;
-}
 
-.admin-page {
-    background: lightblue;
-}
+/* =========================================
+   6. QUIZ TOP BAR
+========================================= */
 
-.login-card {
-    max-width: 480px;
-    margin: 70px auto;
-}
-
-.login-card h1 {
-    text-align: center;
-    color: #173b67;
-    font-size: 26px;
-}
-
-.login-card p {
-    text-align: center;
-}
-
-#adminPanel {
-    width: 100%;
-}
-
-.dashboard-heading {
+.quiz-top-bar {
+    background-color: aliceblue;
+    padding: 10px 15px;
+    border-radius: 7px;
+    margin-bottom: 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 15px;
-    flex-wrap: wrap;
-    margin: 25px 0;
+    gap: 12px;
 }
 
-.dashboard-heading h1 {
-    color: #173b67;
-    font-size: 26px;
-    margin-bottom: 6px;
+.quiz-top-bar h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
 }
 
-.dashboard-heading p {
+.quiz-top-bar p {
+    margin: 0;
     color: #555;
-    margin-top: 0;
-}
-
-#adminPanel .import-card {
-    margin: 18px 0;
-}
-
-#adminPanel input,
-#adminPanel textarea {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 12px;
-    border: 1px solid #c8d1dc;
-    border-radius: 6px;
-    margin: 8px 0 12px;
-}
-
-#adminPanel button {
-    margin: 5px 6px 5px 0;
-}
-
-.logout-button {
-    background: #555 !important;
+    font-size: 13px;
 }
 
 .danger-button {
-    background: #c62828 !important;
+    background-color: #dc3545;
 }
 
 .danger-button:hover {
-    background: #991b1b !important;
+    background-color: #b52a37;
 }
 
-.status-text {
-    font-weight: bold;
+
+/* =========================================
+   7. FIXED QUIZ SCREEN
+========================================= */
+
+body.quiz-active {
+    padding: 10px 15px;
+    height: 100vh;
+    overflow: hidden;
 }
 
-.table-wrap {
-    overflow-x: auto;
+body.quiz-active .quiz-container {
+    height: calc(100vh - 20px);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+body.quiz-active .quiz-header {
+    flex: 0 0 auto;
+    margin-bottom: 10px;
+}
+
+body.quiz-active #quizScreen {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+body.quiz-active .quiz-top-bar {
+    margin-bottom: 10px;
+}
+
+
+/* =========================================
+   8. QUESTION AND PALETTE LAYOUT
+========================================= */
+
+.quiz-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 230px;
+    gap: 12px;
     width: 100%;
+    height: 100%;
+    min-height: 0;
+    align-items: start;
 }
 
-.results-table {
+/* Question area */
+
+.quiz-main {
+    background-color: aliceblue;
+    padding: 18px 20px;
+    border-radius: 8px;
     width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-    background: #fff;
-}
-
-.results-table th,
-.results-table td {
-    border: 1px solid #d6dce5;
-    padding: 10px;
+    min-width: 0;
+    height: fit-content;
+    max-height: 100%;
+    margin: 0;
+    overflow-y: auto;
     text-align: left;
 }
 
-.results-table th {
-    background: #eaf1f8;
+.question-header {
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    text-align: left;
 }
 
-#answerReview {
-    display: none;
-    width: 100%;
+.question-header h3 {
+    margin: 0;
+    color: black;
+    font-size: 16px;
 }
 
-#thankYouMessage {
-    display: none;
-}
-
-#resultScreen {
-    min-height: auto;
-    border-radius: 12px;
-    margin: 20px auto;
-    max-width: 900px;
-}
-
-#resultDetails {
-    font-size: 18px;
-    font-weight: 600;
-}
-
-@media (max-width: 600px) {
-    .dashboard-heading {
-        align-items: flex-start;
-    }
-
-    .results-table {
-        font-size: 13px;
-    }
-
-    .results-table th,
-    .results-table td {
-        padding: 7px;
-    }
-}
-
-/* No questions available empty state */
-.empty-state {
-    min-height: 65vh;
-    width: 100%;
-    box-sizing: border-box;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 35px 20px;
-    color: #173b67;
-}
-
-.empty-state-image {
-    display: block;
-    width: min(280px, 75vw);
-    height: auto;
-    margin: 0 auto 18px;
-}
-
-.empty-state h2 {
-    margin: 8px 0;
-    font-size: 25px;
-    color: #173b67;
-}
-
-.empty-state p {
-    margin: 8px 0;
-    color: #52657c;
+.question-text {
     font-size: 16px;
     line-height: 1.5;
+    
+    margin-bottom: 12px;
+    overflow-wrap: anywhere;
+    text-align: left;
 }
 
-.empty-state .empty-state-help {
-    font-size: 14px;
-    color: #718096;
+
+/* =========================================
+   9. QUESTION IMAGE
+========================================= */
+
+.question-image-container {
+    width: 100%;
+    margin: 8px 0 12px;
+    text-align: left;
 }
+
+.question-image-container img {
+    max-width: 100%;
+    max-height: 220px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 4px;
+    background-color: white;
+}
+
+
+/* =========================================
+   10. ANSWER OPTIONS
+========================================= */
+
+.options {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background-color: #eef7fc;
+    border-radius: 5px;
+    transition: 0.2s;
+    width: 100%;
+    text-align: left;
+}
+
+.option input {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.option span {
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.option.selected {
+    background-color: #dceeff;
+    border-color: #0877d1;
+}
+
+
+/* =========================================
+   11. QUESTION ACTION BUTTONS
+========================================= */
 
 .question-actions {
     display: flex;
     justify-content: flex-start;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    margin-top: 20px;
+    gap: 6px;
+    margin-top: 12px;
 }
 
 .question-actions button {
-    padding: 12px 25px;
-    border: none;
-    border-radius: 7px;
-    font-size: 16px;
-    cursor: pointer;
+    padding: 6px 10px;
+    font-size: 12px;
+    height: 30px;
+    min-width: 65px;
+    border-radius: 4px;
+    line-height: 1;
 }
 
 #previousBtn {
-    background-color: #00aeef;
-    color: white;
+    background-color: #6c757d;
+}
+
+#previousBtn:hover {
+    background-color: #545b62;
 }
 
 #clearBtn {
-    background-color: #e5e7eb;
-    color: #222;
+    background-color: #e69a16;
 }
 
-#saveNextBtn {
-    background-color: #2563eb;
-    color: white;
-    font-weight: bold;
+#clearBtn:hover {
+    background-color: #bd7908;
 }
 
-#saveNextBtn:disabled {
-    background-color: #9ca3af;
-    cursor: not-allowed;
-}
 
-.question-actions button {
-    padding: 12px 20px;
-    border: none;
-    border-radius: 7px;
-    font-size: 16px;
-    cursor: pointer;
-}
-
-@media (max-width: 600px) {
-    .question-actions {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-}
-/* Quiz screen two-column layout */
-#quizScreen {
-    width: 100%;
-}
-
-.quiz-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 280px;
-    gap: 25px;
-    margin-top: 20px;
-    align-items: start;
-    width: 100%;
-}
-
-.quiz-main {
-    min-width: 0;
-}
+/* =========================================
+   12. QUESTION PALETTE
+========================================= */
 
 .question-palette {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 12px;
     width: 100%;
-
-    box-sizing: border-box;
-    background: aliceblue;
-    padding: 18px;
-    
-    border: 1px solid #ccc;
-    position: sticky;
-    top: 20px;
+    height: fit-content;
+    align-self: start;
+    overflow: visible;
 }
 
-.question-palette h3 {
-    text-align: center;
-    margin-top: 0;
+.palette-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 12px;
 }
 
-#paletteButtons {
+.palette-header h3 {
+    font-size: 14px;
+    margin: 0;
+}
+
+#palettePageInfo {
+    font-size: 10px;
+    color: #555;
+}
+
+
+/* Palette numbers */
+
+.palette-buttons {
     display: grid;
-    grid-template-columns: repeat(4, 45px);
-    gap: 12px;
-    justify-content: center;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    justify-items: center;
 }
 
-.palette-btn {
-    width: 45px;
-    height: 45px;
+.palette-button {
+    width: 34px;
+    height: 34px;
     padding: 0;
+    border: 1px solid #ccc;
     border-radius: 50%;
-    background: #e5e7eb;
-    color: black;
-    font-size: 16px;
+    font-size: 11px;
+    font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.palette-btn.current {
-    background: #1769aa;
+.palette-button.current {
+    background-color: #2563eb;
     color: white;
+    border-color: #2563eb;
 }
 
-.palette-btn.answered {
-    background: #198754;
+.palette-button.answered {
+    background-color: #16a34a;
     color: white;
+    border-color: #16a34a;
 }
 
-/* Mobile view */
-@media (max-width: 700px) {
+.palette-button.unanswered {
+    background-color: #eeeeee;
+    color: #333;
+}
+
+
+/* Palette navigation */
+
+.palette-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    gap: 8px;
+}
+
+.palette-navigation button {
+    width: 30px;
+    height: 28px;
+    padding: 0;
+    border-radius: 4px;
+    background-color: #2563eb;
+    font-size: 12px;
+}
+
+.palette-navigation button:disabled {
+    background-color: #ccc;
+}
+
+#palettePageNumber {
+    font-size: 11px;
+    font-weight: bold;
+}
+
+
+/* Palette legend */
+
+.palette-legend {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+    font-size: 10px;
+}
+
+.palette-legend div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-box {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.legend-box.current {
+    background-color: #2563eb;
+}
+
+.legend-box.answered {
+    background-color: #16a34a;
+}
+
+.legend-box.unanswered {
+    background-color: #eee;
+    border: 1px solid #ccc;
+}
+
+
+/* =========================================
+   13. RESULT SCREEN
+========================================= */
+
+.result-screen {
+    width: 100%;
+    max-width: 900px;
+    margin: 25px auto;
+}
+
+.result-card {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+}
+
+.result-card > h2 {
+    color: #198754;
+}
+
+.result-details {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 25px 0;
+}
+
+.result-item {
+    background-color: #edf6ff;
+    padding: 20px;
+    min-width: 180px;
+    border-radius: 8px;
+}
+
+.result-item span {
+    color: #555;
+}
+
+.result-item h2 {
+    margin: 10px 0 0;
+    color: #0877d1;
+}
+
+#thankYouMessage {
+    background-color: #e9f7ef;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+#answerReview {
+    text-align: left;
+    margin-top: 25px;
+}
+
+#answerReview h3 {
+    text-align: center;
+}
+
+.review-question {
+    background-color: #f7f9fc;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 18px;
+    margin: 15px 0;
+}
+
+.review-question img {
+    max-width: 100%;
+    max-height: 300px;
+    display: block;
+    margin: 12px auto;
+    object-fit: contain;
+}
+
+.review-correct {
+    color: #198754;
+    font-weight: bold;
+}
+
+.review-wrong {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+
+/* =========================================
+   14. ADMIN LOGIN
+========================================= */
+
+.admin-login-card {
+    background-color: white;
+    max-width: 450px;
+    margin: 40px auto;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.admin-login-card input {
+    margin: 12px 0;
+}
+
+
+/* =========================================
+   15. ADMIN PANEL
+========================================= */
+
+.admin-title-row {
+    background-color: aliceblue;
+    padding: 18px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-title-row h2 {
+    margin-bottom: 5px;
+}
+
+.admin-title-row p {
+    margin: 0;
+    color: #555;
+}
+
+.logout-button {
+    background-color: #dc3545;
+}
+
+.logout-button:hover {
+    background-color: #b52a37;
+}
+
+.import-card {
+    background-color: white;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.07);
+}
+
+.import-card h3 {
+    margin-bottom: 15px;
+    color: #174e78;
+}
+
+.import-card p {
+    line-height: 1.5;
+}
+
+.import-card button {
+    margin-top: 10px;
+}
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.section-heading h3 {
+    margin: 0;
+}
+
+
+/* =========================================
+   16. ADMIN TABLES
+========================================= */
+
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 15px;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 500px;
+    background-color: white;
+}
+
+.admin-table th,
+.admin-table td {
+    border: 1px solid #d9e0e6;
+    padding: 12px;
+    text-align: left;
+}
+
+.admin-table th {
+    background-color: #eaf3fb;
+}
+
+.admin-table tr:nth-child(even) {
+    background-color: #f8fbff;
+}
+
+.admin-table button {
+    padding: 7px 12px;
+    font-size: 12px;
+}
+
+
+/* =========================================
+   17. CONFIRMATION BOX
+========================================= */
+
+.confirm-box {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0,0,0,0.55);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+}
+
+.confirm-content {
+    background-color: white;
+    width: 100%;
+    max-width: 400px;
+    padding: 25px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.confirm-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+
+/* =========================================
+   18. STUDENT LOGIN
+========================================= */
+
+#passwordScreen {
+    width: 420px;
+    max-width: calc(100% - 30px);
+    min-height: auto;
+    margin: 40px auto;
+    padding: 25px;
+    border-radius: 0;
+}
+
+#passwordScreen input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 12px;
+    font-size: 16px;
+}
+
+#passwordScreen button {
+    padding: 12px 22px;
+    font-size: 16px;
+}
+
+
+/* =========================================
+   19. TABLET
+========================================= */
+
+@media (max-width: 900px) and (min-width: 701px) {
+
     .quiz-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr) 205px;
+        gap: 10px;
+    }
+
+    .quiz-main {
+        padding: 14px;
     }
 
     .question-palette {
-        position: static;
+        padding: 9px;
     }
+
+    .palette-button {
+        width: 30px;
+        height: 30px;
+    }
+
+}
+
+
+/* =========================================
+   20. MOBILE
+========================================= */
+
+@media (max-width: 700px) {
+
+    body {
+        padding: 8px;
+    }
+
+    body.quiz-active {
+        padding: 6px;
+    }
+
+    body.quiz-active .quiz-container {
+        height: calc(100dvh - 12px);
+    }
+
+    .quiz-header,
+    .admin-header {
+        padding: 8px;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .logo {
+        width: 120px;
+        height: 45px;
+    }
+
+    .header-left h2 {
+        font-size: 16px;
+    }
+
+    .quiz-top-bar {
+        padding: 8px;
+        margin-bottom: 6px;
+    }
+
+    .quiz-top-bar h2 {
+        font-size: 15px;
+    }
+
+    .quiz-top-bar p {
+        font-size: 11px;
+    }
+
+    .quiz-layout {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 7px;
+        overflow: hidden;
+    }
+
+    .question-palette {
+        grid-row: 1;
+        padding: 7px;
+    }
+
+    .palette-header {
+        margin-bottom: 6px;
+    }
+
+    .palette-buttons {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 4px;
+    }
+
+    .palette-button {
+        width: 25px;
+        height: 25px;
+        font-size: 10px;
+    }
+
+    .palette-navigation {
+        margin-top: 6px;
+    }
+
+    .palette-legend {
+        display: none;
+    }
+
+    .quiz-main {
+        grid-row: 2;
+        height: 100%;
+        min-height: 0;
+        padding: 12px;
+    }
+
+    .question-header {
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+    }
+
+    .question-text {
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    .question-image-container img {
+        max-height: 130px;
+    }
+
+    .options {
+        gap: 5px;
+    }
+
+    .option {
+        padding: 7px;
+        gap: 7px;
+        font-size: 12px;
+    }
+
+    .question-actions {
+        gap: 4px;
+        margin-top: 8px;
+    }
+
+    .question-actions button {
+        padding: 5px 7px;
+        font-size: 10px;
+        height: 28px;
+        min-width: 0;
+    }
+
+    .quiz-box,
+    .result-card,
+    .import-card {
+        padding: 15px;
+    }
+
+    .admin-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .result-details {
+        flex-direction: column;
+    }
+
+    .result-item {
+        width: 100%;
+    }
+
+}
+
+
+/* =========================================
+   21. VERY SMALL MOBILE
+========================================= */
+
+@media (max-width: 360px) {
+
+    .logo {
+        width: 105px;
+        height: 40px;
+    }
+
+    .palette-buttons {
+        gap: 3px;
+    }
+
+    .palette-button {
+        width: 22px;
+        height: 22px;
+        font-size: 9px;
+    }
+
+}
+
+/* =========================================
+   REMOVE ALL ROUNDED CORNERS
+========================================= */
+
+*,
+*::before,
+*::after {
+    border-radius: 0 !important;
 }

@@ -1,787 +1,369 @@
 
-/* ==========================================
+/* =========================================
    1. GLOBAL VARIABLES
-========================================== */
+========================================= */
 
 let score = 0;
 let questionIndex = 0;
-let userAnswers = [];
-let selectedAnswers = [];
-let quizStarted = false;
-let studentName = "";
+
 let questions = [];
+let selectedAnswers = [];
+
+let studentName = "";
+let studentToken = "";
+
+let quizStarted = false;
 let resultSubmitting = false;
+
 let reviewEnabled = false;
 let confirmAction = null;
+let palettePage = 0;
 
-const TEST_PASSWORD = "1234";
+const QUESTIONS_PER_PALETTE_PAGE = 12;
+const TOKEN_KEY = "quizStudentToken";
+const ROLL_KEY = "quizStudentRollNumber";
+const QUESTIONS_CACHE_KEY = "quizQuestionsCache";
+
+function getProgressKey() {
+    return "quizStudentProgress_" + studentName;
+}
 
 
-/* ==========================================
+/* =========================================
    2. PAGE LOADING
-========================================== */
+========================================= */
 
-window.addEventListener("DOMContentLoaded", async function () {
+window.addEventListener("DOMContentLoaded", function () {
 
-    // Restore quiz title
-    let savedTitle = localStorage.getItem("quizTitle");
-    let displayTitle = document.getElementById("displayQuizTitle");
-    let titleInput = document.getElementById("quizTitle");
-
-    if (savedTitle && displayTitle) {
-        displayTitle.innerText = savedTitle;
+    if (getElement("adminLoginGate")) {
+        restoreAdminSession();
     }
 
-    if (savedTitle && titleInput) {
-        titleInput.value = savedTitle;
+    if (getElement("startScreen")) {
+
+        studentToken = localStorage.getItem(TOKEN_KEY) || "";
+        studentName = localStorage.getItem(ROLL_KEY) || "";
+
+        loadQuestionsFromServer();
+
     }
 
-    // Restore imported file name
-    let fileName = localStorage.getItem("importedFileName");
-    let fileNameElement = document.getElementById("fileName");
-
-    if (fileNameElement) {
-        fileNameElement.innerText = fileName
-            ? "Imported File: " + fileName
-            : "No file imported yet";
-    }
-
-    // Load questions from MongoDB
-    await loadQuestionsFromServer();
-
-    // Restore admin login in the same browser tab
-    let savedAdminPassword = sessionStorage.getItem("adminPassword");
-
-    if (savedAdminPassword && document.getElementById("adminPanel")) {
-
-        try {
-            let response = await fetch("/api/admin/review-setting", {
-                headers: {
-                    "x-admin-password": savedAdminPassword
-                },
-                cache: "no-store"
-            });
-
-            if (response.ok) {
-
-                let adminPanel = document.getElementById("adminPanel");
-                let loginGate = document.getElementById("adminLoginGate");
-                let loginBox = document.getElementById("adminLogin");
-
-                if (adminPanel) adminPanel.style.display = "block";
-                if (loginGate) loginGate.style.display = "none";
-                if (loginBox) loginBox.style.display = "none";
-
-                await loadAdminReviewSetting();
-
-            } else {
-                sessionStorage.removeItem("adminPassword");
-            }
-
-        } catch (error) {
-            console.error("Admin session error:", error);
-        }
-    }
-
-    // Restore student quiz progress
-    if (questions.length > 0 && loadQuizProgress()) {
-
-        let startScreen = document.getElementById("startScreen");
-        let passwordScreen = document.getElementById("passwordScreen");
-        let noQuestions = document.getElementById("noQuestions");
-        let resultScreen = document.getElementById("resultScreen");
-        let quizScreen = document.getElementById("quizScreen");
-
-        if (startScreen) startScreen.style.display = "none";
-        if (passwordScreen) passwordScreen.style.display = "none";
-        if (noQuestions) noQuestions.style.display = "none";
-        if (resultScreen) resultScreen.style.display = "none";
-        if (quizScreen) quizScreen.style.display = "block";
-
-        quizStarted = true;
-
-        let cancelBtn = document.getElementById("cancelBtn");
-
-        if (cancelBtn) {
-            cancelBtn.style.display = "inline-block";
-        }
-
-        showQuestion();
-    }
 });
 
 
-/* ==========================================
-   3. MESSAGE BOX
-========================================== */
-
-function showMessage(message) {
-
-    let text = document.getElementById("messageText");
-    let box = document.getElementById("customMessage");
-
-    if (text && box) {
-        text.innerText = message;
-        box.style.display = "block";
-    } else {
-        alert(message);
-    }
-}
-
-
-function closeMessage() {
-
-    let box = document.getElementById("customMessage");
-
-    if (box) {
-        box.style.display = "none";
-    }
-}
-
-
-/* ==========================================
-   4. LOAD QUESTIONS FROM SERVER
-========================================== */
-
-async function loadQuestionsFromServer() {
-
-    let message = document.getElementById("importMessage");
-
-    try {
-
-        if (message) {
-            message.innerText = "Loading questions...";
-        }
-
-        let response = await fetch("/api/quiz/questions", {
-            cache: "no-store"
-        });
-
-        let data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || "Unable to load questions.");
-        }
-
-        questions = Array.isArray(data)
-            ? data
-            : (data.questions || []);
-
-        checkQuestions();
-
-        if (message) {
-            message.innerText = questions.length
-                ? questions.length + " questions loaded from server."
-                : "No questions available on the server.";
-        }
-
-    } catch (error) {
-
-        questions = [];
-
-        showCorrectScreen();
-
-        if (message) {
-            message.innerText =
-                "Cannot load questions. Check the server connection.";
-        }
-
-        console.error("Question loading error:", error);
-    }
-}
-
-
-/* ==========================================
-   5. SHOW CORRECT SCREEN
-========================================== */
-
-function showCorrectScreen() {
-
-    let noQuestions = document.getElementById("noQuestions");
-    let startScreen = document.getElementById("startScreen");
-    let passwordScreen = document.getElementById("passwordScreen");
-    let quizScreen = document.getElementById("quizScreen");
-
-    if (questions.length === 0) {
-
-        if (noQuestions) noQuestions.style.display = "flex";
-        if (startScreen) startScreen.style.display = "none";
-        if (passwordScreen) passwordScreen.style.display = "none";
-        if (quizScreen) quizScreen.style.display = "none";
-
-    } else {
-
-        if (noQuestions) noQuestions.style.display = "none";
-        if (startScreen) startScreen.style.display = "block";
-        if (passwordScreen) passwordScreen.style.display = "none";
-        if (quizScreen) quizScreen.style.display = "none";
-    }
-}
-
-
-function checkQuestions() {
-
-    let noQuestionsText = document.getElementById("noQuestionsText");
-
-    if (questions.length === 0) {
-
-        if (noQuestionsText) {
-            noQuestionsText.innerText =
-                "please Contact your administrator.";
-        }
-
-    }
-
-    showCorrectScreen();
-}
-
-
-/* ==========================================
-   6. HTML TEXT SAFETY
-========================================== */
+/* =========================================
+   3. COMMON HELPER FUNCTIONS
+========================================= */
 
 function escapeHTML(value) {
 
-    return String(value ?? "").replace(/[&<>"']/g, function (character) {
+    return String(value ?? "").replace(/[&<>"']/g, function (char) {
 
-        return {
+        const entities = {
             "&": "&amp;",
             "<": "&lt;",
             ">": "&gt;",
             '"': "&quot;",
-            "'": "&#39;"
-        }[character];
+            "'": "&#039;"
+        };
+
+        return entities[char];
 
     });
+
 }
 
 
-function getOptionLetter(option, index) {
+function getElement(id) {
+    return document.getElementById(id);
+}
 
-    if (typeof option === "object" && option !== null) {
-        return String(option.letter || "").trim().toUpperCase();
+
+function showMessage(id, message, isError = false) {
+
+    const element = getElement(id);
+
+    if (!element) return;
+
+    element.textContent = message;
+
+    element.style.color = isError ? "#dc3545" : "#0877d1";
+
+}
+
+
+function getAdminPassword() {
+    return sessionStorage.getItem("adminPassword") || "";
+}
+
+
+function getStudentHeaders() {
+
+    return {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + studentToken
+    };
+
+}
+
+
+function getAdminHeaders() {
+
+    return {
+        "Content-Type": "application/json",
+        "x-admin-password": getAdminPassword()
+    };
+
+}
+
+
+/* =========================================
+   4. LOAD QUESTIONS - CACHE FIRST
+========================================= */
+
+async function loadQuestionsFromServer() {
+
+    let cacheLoaded = false;
+
+    // Load questions immediately from localStorage.
+    try {
+
+        const cached = localStorage.getItem(QUESTIONS_CACHE_KEY);
+
+        if (cached) {
+
+            const cachedQuestions = JSON.parse(cached);
+
+            if (Array.isArray(cachedQuestions)) {
+
+                questions = cachedQuestions;
+                cacheLoaded = true;
+
+                restoreQuizTitle();
+
+                if (questions.length > 0 && studentToken && studentName) {
+
+                    const savedProgress = loadQuizProgress();
+
+                    if (savedProgress) {
+
+                        quizStarted = true;
+
+                        showStudentQuiz();
+
+                        showQuestion();
+
+                    } else {
+
+                        showCorrectScreen();
+
+                    }
+
+                } else {
+
+                    showCorrectScreen();
+
+                }
+
+            }
+
+        }
+
+    } catch (error) {
+
+        console.error("Local cache error:", error);
+
+        localStorage.removeItem(QUESTIONS_CACHE_KEY);
+
     }
 
-    return String.fromCharCode(65 + index);
-}
+    // Fetch latest questions in the background.
+    try {
 
+        const response = await fetch("/api/quiz/questions");
 
-function getOptionText(option) {
+        const data = await response.json();
 
-    if (typeof option === "object" && option !== null) {
-        return String(option.text || "");
+        if (!response.ok || !data.success) {
+
+            throw new Error(data.message || "Unable to load questions.");
+
+        }
+
+        const latestQuestions = Array.isArray(data.questions)
+            ? data.questions
+            : [];
+
+        localStorage.setItem(
+            QUESTIONS_CACHE_KEY,
+            JSON.stringify(latestQuestions)
+        );
+
+        // Display server questions if no cache exists.
+        if (!cacheLoaded) {
+
+            questions = latestQuestions;
+
+            if (questions.length > 0 && studentToken && studentName) {
+
+                const savedProgress = loadQuizProgress();
+
+                if (savedProgress) {
+
+                    quizStarted = true;
+
+                    showStudentQuiz();
+
+                    showQuestion();
+
+                } else {
+
+                    showCorrectScreen();
+
+                }
+
+            } else {
+
+                showCorrectScreen();
+
+            }
+
+        }
+
+        updateQuestionCount();
+
+    } catch (error) {
+
+        console.error("Question loading error:", error);
+
+        if (!cacheLoaded) {
+
+            const message = getElement("noQuestionsText");
+
+            if (message) {
+                message.textContent = error.message;
+            }
+
+            showCorrectScreen();
+
+        }
+
     }
 
-    return String(option ?? "");
 }
 
 
-/* ==========================================
-   7. STUDENT PASSWORD
-========================================== */
+/* =========================================
+   5. SHOW CORRECT STUDENT SCREEN
+========================================= */
+
+function showCorrectScreen() {
+
+    const startScreen = getElement("startScreen");
+    const passwordScreen = getElement("passwordScreen");
+    const noQuestions = getElement("noQuestions");
+    const quizScreen = getElement("quizScreen");
+    const resultScreen = getElement("resultScreen");
+
+    if (startScreen) startScreen.style.display = "none";
+    if (passwordScreen) passwordScreen.style.display = "none";
+    if (quizScreen) quizScreen.style.display = "none";
+    if (resultScreen) resultScreen.style.display = "none";
+
+    if (questions.length === 0) {
+
+        if (noQuestions) {
+            noQuestions.style.display = "flex";
+        }
+
+    } else {
+
+        if (noQuestions) {
+            noQuestions.style.display = "none";
+        }
+
+        if (startScreen) {
+            startScreen.style.display = "block";
+        }
+
+    }
+
+    restoreQuizTitle();
+
+}
+
+
+function restoreQuizTitle() {
+
+    const title = localStorage.getItem("quizTitle") ||
+        "Welcome to Online Assessment";
+
+    const displayTitle = getElement("displayQuizTitle");
+    const quizHeading = getElement("quizHeading");
+    const adminTitle = getElement("quizTitle");
+
+    if (displayTitle) displayTitle.textContent = title;
+    if (quizHeading) quizHeading.textContent = title;
+    if (adminTitle) adminTitle.value = title;
+
+}
+
+
+/* =========================================
+   6. STUDENT LOGIN SCREEN
+========================================= */
 
 function showPasswordScreen() {
 
     if (questions.length === 0) {
+
         showCorrectScreen();
+
         return;
+
     }
 
-    let startScreen = document.getElementById("startScreen");
-    let passwordScreen = document.getElementById("passwordScreen");
-    let passwordInput = document.getElementById("testPassword");
-    let passwordMessage = document.getElementById("passwordMessage");
+    const startScreen = getElement("startScreen");
+    const passwordScreen = getElement("passwordScreen");
 
     if (startScreen) startScreen.style.display = "none";
     if (passwordScreen) passwordScreen.style.display = "block";
 
-    if (passwordInput) passwordInput.value = "";
-    if (passwordMessage) passwordMessage.innerText = "";
+    const rollInput = getElement("studentRollNumber");
+
+    if (rollInput && studentName) {
+        rollInput.value = studentName;
+    }
+
 }
 
 
-function verifyPassword() {
+/* =========================================
+   7. STUDENT LOGIN API
+========================================= */
 
-    let passwordInput = document.getElementById("testPassword");
-    let passwordMessage = document.getElementById("passwordMessage");
+async function verifyPassword() {
 
-    let enteredPassword = passwordInput
-        ? passwordInput.value
-        : "";
+    const rollNumber = getElement("studentRollNumber")?.value.trim();
+    const password = getElement("testPassword")?.value;
 
-    if (enteredPassword === TEST_PASSWORD) {
+    if (!rollNumber || !password) {
 
-        let passwordScreen = document.getElementById("passwordScreen");
-
-        if (passwordScreen) {
-            passwordScreen.style.display = "none";
-        }
-
-        startQuiz();
-
-    } else {
-
-        if (passwordMessage) {
-            passwordMessage.innerText =
-                "Incorrect password. Please try again.";
-        }
-    }
-}
-
-
-/* ==========================================
-   8. START QUIZ
-========================================== */
-
-function startQuiz() {
-
-    if (questions.length === 0) {
-        showCorrectScreen();
-        return;
-    }
-
-    let nameInput = document.getElementById("studentName");
-
-    studentName = nameInput
-        ? nameInput.value.trim()
-        : "";
-
-    if (!studentName) {
-
-        showMessage("Please enter the student name.");
-
-        let passwordScreen = document.getElementById("passwordScreen");
-        let startScreen = document.getElementById("startScreen");
-
-        if (passwordScreen) passwordScreen.style.display = "none";
-        if (startScreen) startScreen.style.display = "block";
-
-        return;
-    }
-
-    score = 0;
-    questionIndex = 0;
-    userAnswers = [];
-    selectedAnswers = [];
-    quizStarted = true;
-
-    saveQuizProgress();
-
-    if (!document.fullscreenElement &&
-        document.documentElement.requestFullscreen) {
-
-        document.documentElement.requestFullscreen()
-            .catch(function () {});
-    }
-
-    let cancelBtn = document.getElementById("cancelBtn");
-    let noQuestions = document.getElementById("noQuestions");
-    let startScreen = document.getElementById("startScreen");
-    let quizScreen = document.getElementById("quizScreen");
-    let resultScreen = document.getElementById("resultScreen");
-
-    if (cancelBtn) cancelBtn.style.display = "inline-block";
-    if (noQuestions) noQuestions.style.display = "none";
-    if (startScreen) startScreen.style.display = "none";
-    if (quizScreen) quizScreen.style.display = "block";
-    if (resultScreen) resultScreen.style.display = "none";
-
-    showQuestion();
-}
-
-
-/* ==========================================
-   9. DISPLAY QUESTION
-========================================== */
-
-function showQuestion() {
-
-    let q = questions[questionIndex];
-
-    if (!q) return;
-
-    let questionNumber = document.getElementById("questionNumber");
-    let questionElement = document.getElementById("question");
-    let optionsElement = document.getElementById("options");
-
-    if (!questionNumber || !questionElement || !optionsElement) {
-        return;
-    }
-
-    questionNumber.innerText =
-        "Question " + (questionIndex + 1) + " of " + questions.length;
-
-    questionElement.innerText = q.question || "";
-
-    let optionsHTML = "";
-
-    (q.options || []).forEach(function (option, index) {
-
-        let letter = getOptionLetter(option, index);
-        let optionText = getOptionText(option);
-
-        optionsHTML += `
-            <label class="quiz-option">
-                <input
-                    type="radio"
-                    name="answer"
-                    value="${escapeHTML(letter)}"
-                    onchange="answerSelected()"
-                >
-                ${escapeHTML(letter)}. ${escapeHTML(optionText)}
-            </label>
-        `;
-    });
-
-    optionsElement.innerHTML = optionsHTML;
-
-    let selected = selectedAnswers[questionIndex];
-
-    document.querySelectorAll('input[name="answer"]').forEach(function (radio) {
-
-        radio.checked = radio.value === selected;
-
-    });
-
-    let clearBtn = document.getElementById("clearBtn");
-    let saveNextBtn = document.getElementById("saveNextBtn");
-    let feedback = document.getElementById("feedback");
-    let previousBtn = document.getElementById("previousBtn");
-
-    if (clearBtn) {
-        clearBtn.disabled = !selected;
-    }
-
-    if (saveNextBtn) {
-
-        saveNextBtn.disabled = !selected;
-
-        saveNextBtn.innerText =
-            questionIndex === questions.length - 1
-                ? "Submit Test"
-                : "Save & Next";
-    }
-
-    if (feedback) {
-        feedback.innerText = "";
-    }
-
-    if (previousBtn) {
-
-        previousBtn.style.display =
-            questionIndex === 0 ? "none" : "inline-block";
-    }
-
-    showQuestionPalette();
-}
-
-
-function showQuestionPalette() {
-    let palette = document.getElementById("paletteButtons");
-
-    if (!palette) return;
-
-    palette.innerHTML = "";
-
-    questions.forEach(function (q, index) {
-        let button = document.createElement("button");
-
-        button.innerText = index + 1;
-        button.className = "palette-btn";
-
-        if (index === questionIndex) {
-            button.classList.add("current");
-        } else if (userAnswers[index]) {
-            button.classList.add("answered");
-        }
-
-        button.onclick = function () {
-            questionIndex = index;
-            showQuestion();
-        };
-
-        palette.appendChild(button);
-    });
-}
-
-
-/* ==========================================
-   10. ANSWER SELECTION
-========================================== */
-
-function answerSelected() {
-
-    let selected = document.querySelector(
-        'input[name="answer"]:checked'
-    );
-
-    if (!selected) return;
-
-    selectedAnswers[questionIndex] =
-        selected.value.trim().toUpperCase();
-
-    let saveNextBtn = document.getElementById("saveNextBtn");
-    let clearBtn = document.getElementById("clearBtn");
-    let feedback = document.getElementById("feedback");
-
-    if (saveNextBtn) {
-        saveNextBtn.disabled = false;
-    }
-
-    if (clearBtn) {
-        clearBtn.disabled = false;
-    }
-
-    if (feedback) {
-        feedback.innerText = "";
-    }
-
-    saveQuizProgress();
-}
-
-
-/* ==========================================
-   11. CLEAR ANSWER
-========================================== */
-
-function clearAnswer() {
-
-    delete selectedAnswers[questionIndex];
-    delete userAnswers[questionIndex];
-
-    document.querySelectorAll('input[name="answer"]').forEach(function (radio) {
-        radio.checked = false;
-    });
-
-    let saveNextBtn = document.getElementById("saveNextBtn");
-    let clearBtn = document.getElementById("clearBtn");
-    let feedback = document.getElementById("feedback");
-
-    if (saveNextBtn) saveNextBtn.disabled = true;
-    if (clearBtn) clearBtn.disabled = true;
-
-    if (feedback) {
-        feedback.innerText = "";
-    }
-
-    saveQuizProgress();
-}
-
-
-/* ==========================================
-   12. SUBMIT ANSWER
-========================================== */
-
-function saveAndNext() {
-
-    let selected = document.querySelector(
-        'input[name="answer"]:checked'
-    );
-
-    let feedback = document.getElementById("feedback");
-
-    if (!selected) {
-
-        if (feedback) {
-            feedback.innerText = "Please select an answer!";
-        }
-
-        return;
-    }
-
-    // Save selected answer
-    let answer = selected.value.trim().toUpperCase();
-
-    selectedAnswers[questionIndex] = answer;
-    userAnswers[questionIndex] = answer;
-
-    // Save progress
-    saveQuizProgress();
-
-    // Move to next question
-    if (questionIndex < questions.length - 1) {
-
-        questionIndex++;
-
-        saveQuizProgress();
-
-        showQuestion();
-
-    } else {
-
-        // Last question: Submit complete test
-        completeTest();
-
-    }
-}
-
-/* ==========================================
-   13. NEXT QUESTION
-========================================== */
-
-
-
-
-/* ==========================================
-   14. PREVIOUS QUESTION
-========================================== */
-
-function previousQuestion() {
-
-    if (questionIndex > 0) {
-
-        questionIndex--;
-
-        saveQuizProgress();
-
-        showQuestion();
-    }
-}
-
-
-/* ==========================================
-   15. SAVE QUIZ RESULT
-========================================== */
-
-async function completeTest() {
-
-    if (resultSubmitting) return;
-
-    resultSubmitting = true;
-
-    quizStarted = false;
-
-    localStorage.removeItem("quizProgress");
-
-    let quizScreen = document.getElementById("quizScreen");
-    let resultScreen = document.getElementById("resultScreen");
-
-    if (!resultScreen) {
-
-        console.error('Missing HTML element: resultScreen');
-
-        resultSubmitting = false;
-
-        return;
-    }
-
-    if (quizScreen) {
-        quizScreen.style.display = "none";
-    }
-
-    resultScreen.style.display = "block";
-
-    let total = questions.length;
-
-    score = 0;
-
-    questions.forEach(function (q, index) {
-
-        let selected = String(userAnswers[index] || "")
-            .trim().toUpperCase();
-
-        let correct = String(q.answer || "")
-            .trim().toUpperCase();
-
-        if (selected && selected === correct) {
-            score++;
-        }
-    });
-
-    let percentageValue = total > 0
-        ? (score / total) * 100
-        : 0;
-
-    let finalScore = document.getElementById("finalScore");
-    let finalPercentage = document.getElementById("finalPercentage");
-    let resultMessage = document.getElementById("resultMessage");
-
-    if (finalScore) {
-        finalScore.innerText = score + " / " + total;
-    }
-
-    if (finalPercentage) {
-        finalPercentage.innerText =
-            percentageValue.toFixed(2) + "%";
-    }
-
-    if (resultMessage) {
-        resultMessage.innerText = "Test Completed!";
-    }
-
-    let cancelBtn = document.getElementById("cancelBtn");
-
-    if (cancelBtn) {
-        cancelBtn.style.display = "none";
-    }
-
-    let reviewElement = document.getElementById("answerReview");
-    let thankYou = document.getElementById("thankYouMessage");
-
-    if (reviewElement) {
-        reviewElement.innerHTML = "";
-        reviewElement.style.display = "none";
-    }
-
-    if (thankYou) {
-        thankYou.style.display = "none";
-    }
-
-    // Check admin review permission
-    let canShowReview = await checkStudentReviewPermission();
-
-    if (canShowReview) {
-
-        showFinalReview();
-
-    } else if (thankYou) {
-
-        thankYou.style.display = "block";
-    }
-
-    window.scrollTo(0, 0);
-
-    // Prepare detailed feedback for MongoDB
-    let feedbackData = questions.map(function (q, index) {
-
-        let selectedLetter = String(userAnswers[index] || "")
-            .trim().toUpperCase();
-
-        let correctLetter = String(q.answer || "")
-            .trim().toUpperCase();
-
-        let selectedOption = (q.options || []).find(
-            function (option, optionIndex) {
-                return getOptionLetter(option, optionIndex) === selectedLetter;
-            }
+        showMessage(
+            "passwordMessage",
+            "Enter your roll number and password.",
+            true
         );
 
-        let correctOption = (q.options || []).find(
-            function (option, optionIndex) {
-                return getOptionLetter(option, optionIndex) === correctLetter;
-            }
-        );
+        return;
 
-        return {
-            question: q.question,
-            options: q.options,
-            selectedAnswer: selectedLetter,
-            selectedText: selectedOption
-                ? getOptionText(selectedOption)
-                : "Not answered",
-            correctAnswer: correctLetter,
-            correctText: correctOption
-                ? getOptionText(correctOption)
-                : "Correct answer not found",
-            isCorrect: selectedLetter !== "" &&
-                selectedLetter === correctLetter
-        };
-    });
+    }
 
-    // Save result to MongoDB
+    showMessage("passwordMessage", "Checking login details...");
+
     try {
 
-        let response = await fetch("/api/quiz/results", {
+        const response = await fetch("/api/student/login", {
 
             method: "POST",
 
@@ -790,934 +372,1019 @@ async function completeTest() {
             },
 
             body: JSON.stringify({
-
-                studentName: studentName,
-                score: score,
-                total: total,
-                percentage: Number(percentageValue.toFixed(2)),
-                feedback: feedbackData
-
+                rollNumber: rollNumber,
+                password: password
             })
+
         });
 
-        let data = await response.json();
+        const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.message || "Unable to save result.");
+        if (!response.ok || !data.success) {
+
+            throw new Error(data.message || "Login failed.");
+
         }
 
-        console.log("Result saved successfully:", data);
+        studentToken = data.token;
+        studentName = data.rollNumber;
+
+        localStorage.setItem(TOKEN_KEY, studentToken);
+        localStorage.setItem(ROLL_KEY, studentName);
+
+        getElement("testPassword").value = "";
+
+        // Restore this student's saved progress if available.
+        const savedProgress = loadQuizProgress();
+
+        if (!savedProgress) {
+
+            selectedAnswers = [];
+            questionIndex = 0;
+
+        }
+
+        startQuiz();
 
     } catch (error) {
 
-        console.error("Result saving error:", error);
+        showMessage(
+            "passwordMessage",
+            error.message,
+            true
+        );
 
-        if (resultMessage) {
-            resultMessage.innerText =
-                "Test completed, but result could not be saved. Contact administrator.";
-        }
-
-    } finally {
-
-        resultSubmitting = false;
     }
+
 }
 
 
-/* ==========================================
-   16. STUDENT ANSWER REVIEW
-========================================== */
+/* =========================================
+   8. START QUIZ
+========================================= */
 
-function showFinalReview() {
+function startQuiz() {
 
-    let reviewHTML = "";
+    if (!studentToken || !studentName) {
 
-    questions.forEach(function (q, index) {
+        showPasswordScreen();
 
-        let selectedLetter = String(userAnswers[index] || "")
-            .trim().toUpperCase();
+        return;
 
-        let correctLetter = String(q.answer || "")
-            .trim().toUpperCase();
-
-        let selectedOption = (q.options || []).find(
-            function (option, optionIndex) {
-                return getOptionLetter(option, optionIndex) === selectedLetter;
-            }
-        );
-
-        let correctOption = (q.options || []).find(
-            function (option, optionIndex) {
-                return getOptionLetter(option, optionIndex) === correctLetter;
-            }
-        );
-
-        let selectedText = selectedOption
-            ? getOptionText(selectedOption)
-            : "Not answered";
-
-        let correctText = correctOption
-            ? getOptionText(correctOption)
-            : "Correct option not found";
-
-        let isCorrect =
-            selectedLetter !== "" &&
-            selectedLetter === correctLetter;
-
-        reviewHTML += `
-
-            <div class="review-card">
-
-                <h3>Question ${index + 1}</h3>
-
-                <p>${escapeHTML(q.question)}</p>
-
-                <p>
-                    <strong>Your Answer:</strong>
-                    ${escapeHTML(selectedLetter
-                        ? selectedLetter + ". " + selectedText
-                        : "Not answered")}
-                </p>
-
-                <p>
-                    <strong>Correct Answer:</strong>
-                    ${escapeHTML(correctLetter + ". " + correctText)}
-                </p>
-
-                <h4 class="${isCorrect ? "correct" : "wrong"}">
-                    ${isCorrect ? "Correct ✓" : "Wrong ✗"}
-                </h4>
-
-            </div>
-
-        `;
-    });
-
-    let reviewElement = document.getElementById("answerReview");
-
-    if (reviewElement) {
-
-        reviewElement.innerHTML = reviewHTML;
-
-        reviewElement.style.display = "block";
     }
-}
 
+    if (questions.length === 0) {
 
-/* ==========================================
-   17. RESTART QUIZ
-========================================== */
+        showCorrectScreen();
 
-function restartQuiz() {
+        return;
 
-    resultSubmitting = false;
+    }
 
     score = 0;
-    questionIndex = 0;
-    userAnswers = [];
-    selectedAnswers = [];
-    quizStarted = false;
-    studentName = "";
+    resultSubmitting = false;
+    quizStarted = true;
 
-    localStorage.removeItem("quizProgress");
+    const studentDisplay = getElement("studentDisplay");
 
-    let reviewElement = document.getElementById("answerReview");
-    let thankYou = document.getElementById("thankYouMessage");
-
-    if (reviewElement) {
-        reviewElement.innerHTML = "";
-        reviewElement.style.display = "none";
+    if (studentDisplay) {
+        studentDisplay.textContent = "Roll Number: " + studentName;
     }
 
-    if (thankYou) {
-        thankYou.style.display = "none";
-    }
+    const passwordScreen = getElement("passwordScreen");
+    const startScreen = getElement("startScreen");
+    const quizScreen = getElement("quizScreen");
+    const resultScreen = getElement("resultScreen");
 
-    let resultScreen = document.getElementById("resultScreen");
-    let quizScreen = document.getElementById("quizScreen");
-    let nameInput = document.getElementById("studentName");
-    let cancelBtn = document.getElementById("cancelBtn");
-
+    if (passwordScreen) passwordScreen.style.display = "none";
+    if (startScreen) startScreen.style.display = "none";
+    if (quizScreen) quizScreen.style.display = "block";
     if (resultScreen) resultScreen.style.display = "none";
-    if (quizScreen) quizScreen.style.display = "none";
-    if (nameInput) nameInput.value = "";
-    if (cancelBtn) cancelBtn.style.display = "none";
 
-    showCorrectScreen();
+    saveQuizProgress();
 
-    if (document.fullscreenElement) {
-        document.exitFullscreen().catch(function () {});
+    showQuestion();
+
+}
+
+
+/* =========================================
+   9. RESTORE QUIZ AFTER RELOAD
+========================================= */
+
+function showStudentQuiz() {
+
+    const startScreen = getElement("startScreen");
+    const passwordScreen = getElement("passwordScreen");
+    const quizScreen = getElement("quizScreen");
+    const resultScreen = getElement("resultScreen");
+    const noQuestions = getElement("noQuestions");
+
+    if (startScreen) startScreen.style.display = "none";
+    if (passwordScreen) passwordScreen.style.display = "none";
+    if (resultScreen) resultScreen.style.display = "none";
+    if (noQuestions) noQuestions.style.display = "none";
+
+    if (quizScreen) quizScreen.style.display = "block";
+
+    const studentDisplay = getElement("studentDisplay");
+
+    if (studentDisplay) {
+        studentDisplay.textContent = "Roll Number: " + studentName;
+    }
+
+}
+
+
+/* =========================================
+   10. SHOW QUESTION
+========================================= */
+
+function showQuestion() {
+
+    if (questions.length === 0) return;
+
+    if (questionIndex < 0 || questionIndex >= questions.length) {
+        return;
+    }
+
+    const currentQuestion = questions[questionIndex];
+
+    const questionNumber = getElement("questionNumber");
+    const questionText = getElement("question");
+    const optionsContainer = getElement("options");
+    const feedback = getElement("feedback");
+
+    if (questionNumber) {
+
+        questionNumber.textContent =
+            "Question " + (questionIndex + 1) +
+            " of " + questions.length;
+
+    }
+
+    if (questionText) {
+        questionText.textContent = currentQuestion.question;
+    }
+
+    if (feedback) {
+        feedback.textContent = "";
+    }
+
+    showQuestionImage(currentQuestion.imageUrl);
+
+    if (optionsContainer) {
+
+        optionsContainer.innerHTML = "";
+
+        currentQuestion.options.forEach(function (option) {
+
+            const label = document.createElement("label");
+
+            label.className = "option";
+
+            const radio = document.createElement("input");
+
+            radio.type = "radio";
+            radio.name = "quizAnswer";
+            radio.value = option.letter;
+
+            const selectedAnswer = selectedAnswers[questionIndex];
+
+            if (selectedAnswer === option.letter) {
+
+                radio.checked = true;
+
+                label.classList.add("selected");
+
+            }
+
+            radio.addEventListener("change", function () {
+
+                answerSelected(option.letter);
+
+            });
+
+            const text = document.createElement("span");
+
+            text.textContent = option.letter + ". " + option.text;
+
+            label.appendChild(radio);
+            label.appendChild(text);
+
+            optionsContainer.appendChild(label);
+
+        });
+
+    }
+
+    const previousBtn = getElement("previousBtn");
+
+    if (previousBtn) {
+        previousBtn.disabled = questionIndex === 0;
+    }
+
+    const saveNextBtn = getElement("saveNextBtn");
+
+    if (saveNextBtn) {
+
+        saveNextBtn.textContent =
+            questionIndex === questions.length - 1
+                ? "Submit Quiz"
+                : "Save & Next";
+
+       saveNextBtn.disabled = false;
+
+    }
+
+    const clearBtn = getElement("clearBtn");
+
+    if (clearBtn) {
+        clearBtn.disabled = !selectedAnswers[questionIndex];
+    }
+
+  
+   renderPalette();
+
+
+}
+
+
+/* =====================================
+   QUESTION PALETTE PAGINATION
+===================================== */
+
+function renderPalette() {
+
+    const palette = document.getElementById("paletteButtons");
+
+    if (!palette) return;
+
+    palette.innerHTML = "";
+
+    const totalQuestions = questions.length;
+
+    const totalPages = Math.ceil(
+        totalQuestions / QUESTIONS_PER_PALETTE_PAGE
+    );
+
+    if (totalPages === 0) {
+        document.getElementById("palettePageInfo").textContent = "0 / 0";
+        document.getElementById("palettePageNumber").textContent = "0 / 0";
+        return;
+    }
+
+    const startIndex = palettePage * QUESTIONS_PER_PALETTE_PAGE;
+
+    const endIndex = Math.min(
+        startIndex + QUESTIONS_PER_PALETTE_PAGE,
+        totalQuestions
+    );
+
+    for (let i = startIndex; i < endIndex; i++) {
+
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.textContent = i + 1;
+        button.className = "palette-button";
+
+        if (i === questionIndex) {
+
+            button.classList.add("current");
+
+        } else if (
+            selectedAnswers[i] !== undefined &&
+            selectedAnswers[i] !== null &&
+            selectedAnswers[i] !== ""
+        ) {
+
+            button.classList.add("answered");
+
+        } else {
+
+            button.classList.add("unanswered");
+
+        }
+
+        button.onclick = function () {
+            goToQuestion(i);
+        };
+
+        palette.appendChild(button);
+    }
+
+    document.getElementById("palettePageInfo").textContent =
+        `${startIndex + 1}–${endIndex} / ${totalQuestions}`;
+
+    document.getElementById("palettePageNumber").textContent =
+        `${palettePage + 1} / ${totalPages}`;
+
+    document.getElementById("previousPaletteBtn").disabled =
+        palettePage === 0;
+
+    document.getElementById("nextPaletteBtn").disabled =
+        palettePage === totalPages - 1;
+}
+
+
+/* =====================================
+   PALETTE PREVIOUS PAGE
+===================================== */
+
+function previousPalettePage() {
+
+    if (palettePage > 0) {
+
+        palettePage--;
+
+        renderPalette();
+
     }
 }
 
 
-/* ==========================================
-   18. SAVE QUIZ PROGRESS
-========================================== */
+/* =====================================
+   PALETTE NEXT PAGE
+===================================== */
+
+function nextPalettePage() {
+
+    const totalPages = Math.ceil(
+        questions.length / QUESTIONS_PER_PALETTE_PAGE
+    );
+
+    if (palettePage < totalPages - 1) {
+
+        palettePage++;
+
+        renderPalette();
+
+    }
+}
+
+
+/* =====================================
+   OPEN QUESTION FROM PALETTE
+===================================== */
+
+function goToQuestion(index) {
+
+    if (index < 0 || index >= questions.length) return;
+
+    questionIndex = index;
+
+    palettePage = Math.floor(
+        index / QUESTIONS_PER_PALETTE_PAGE
+    );
+
+    showQuestion();
+
+    renderPalette();
+}
+
+/* =========================================
+   11. SHOW QUESTION IMAGE
+========================================= */
+
+function showQuestionImage(imageUrl) {
+
+    const container = getElement("questionImageContainer");
+    const image = getElement("questionImage");
+
+    if (!container || !image) return;
+
+    if (imageUrl && typeof imageUrl === "string") {
+
+        image.src = imageUrl;
+
+        image.onerror = function () {
+
+            container.style.display = "none";
+
+            image.removeAttribute("src");
+
+        };
+
+        container.style.display = "block";
+
+    } else {
+
+        image.removeAttribute("src");
+
+        container.style.display = "none";
+
+    }
+
+}
+
+
+/* =========================================
+   12. SELECT ANSWER
+========================================= */
+
+function answerSelected(answer) {
+
+    selectedAnswers[questionIndex] = answer;
+
+    const saveNextBtn = getElement("saveNextBtn");
+    const clearBtn = getElement("clearBtn");
+
+    if (saveNextBtn) saveNextBtn.disabled = false;
+    if (clearBtn) clearBtn.disabled = false;
+
+    document.querySelectorAll(".option").forEach(function (option) {
+
+        option.classList.remove("selected");
+
+        const radio = option.querySelector("input");
+
+        if (radio && radio.checked) {
+            option.classList.add("selected");
+        }
+
+    });
+
+    saveQuizProgress();
+
+    renderPalette();
+
+}
+
+
+/* =========================================
+   13. CLEAR ANSWER
+========================================= */
+
+function clearAnswer() {
+
+    selectedAnswers[questionIndex] = null;
+
+    document.querySelectorAll(
+        'input[name="quizAnswer"]'
+    ).forEach(function (radio) {
+
+        radio.checked = false;
+
+    });
+
+    document.querySelectorAll(".option").forEach(function (option) {
+
+        option.classList.remove("selected");
+
+    });
+
+    const saveNextBtn = getElement("saveNextBtn");
+    const clearBtn = getElement("clearBtn");
+
+    if (saveNextBtn) saveNextBtn.disabled = true;
+    if (clearBtn) clearBtn.disabled = true;
+
+    saveQuizProgress();
+
+   renderPalette();
+
+}
+
+
+/* =========================================
+   14. SAVE ANSWER AND NEXT
+========================================= */
+function saveAndNext() {
+
+    if (resultSubmitting) return;
+
+    const selected = document.querySelector(
+        'input[name="quizAnswer"]:checked'
+    );
+
+    if (selected) {
+        selectedAnswers[questionIndex] = selected.value;
+    }
+
+    saveQuizProgress();
+
+    if (questionIndex < questions.length - 1) {
+
+        questionIndex++;
+
+        showQuestion();
+
+        saveQuizProgress();
+
+    } else {
+
+        const answeredCount = selectedAnswers.filter(function (answer) {
+            return answer !== undefined &&
+                   answer !== null &&
+                   answer !== "";
+        }).length;
+
+        const unansweredCount = questions.length - answeredCount;
+
+        showConfirmation(
+            "You answered " + answeredCount +
+            " out of " + questions.length +
+            " questions.\n\n" +
+            unansweredCount +
+            " questions are unanswered.\n\n" +
+            "Do you want to submit your quiz?",
+            function () {
+                completeTest();
+            }
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   15. PREVIOUS QUESTION
+========================================= */
+
+function previousQuestion() {
+
+    if (questionIndex <= 0) return;
+
+    const selected = document.querySelector(
+        'input[name="quizAnswer"]:checked'
+    );
+
+    if (selected) {
+        selectedAnswers[questionIndex] = selected.value;
+    }
+
+    questionIndex--;
+
+    saveQuizProgress();
+
+    showQuestion();
+
+}
+
+
+/* =========================================
+   16. QUESTION PALETTE
+========================================= */
+
+
+
+/* =========================================
+   17. SAVE PROGRESS - LOCALSTORAGE ONLY
+========================================= */
 
 function saveQuizProgress() {
 
-    if (!quizStarted) return;
+    if (!studentName || !studentToken) return;
 
-    let progress = {
+    const progress = {
 
-        quizStarted: true,
+        rollNumber: studentName,
+
         questionIndex: questionIndex,
-        userAnswers: userAnswers,
+
         selectedAnswers: selectedAnswers,
-        studentName: studentName,
+
         questionCount: questions.length
 
     };
 
     localStorage.setItem(
-        "quizProgress",
+        getProgressKey(),
         JSON.stringify(progress)
     );
+
 }
 
 
-/* ==========================================
-   19. RESTORE QUIZ PROGRESS
-========================================== */
+/* =========================================
+   18. RESTORE PROGRESS - LOCALSTORAGE ONLY
+========================================= */
 
 function loadQuizProgress() {
 
-    let saved = localStorage.getItem("quizProgress");
-
-    if (!saved) return false;
-
     try {
 
-        let progress = JSON.parse(saved);
+        const saved = localStorage.getItem(getProgressKey());
 
-        if (!progress || progress.quizStarted !== true) {
-            return false;
+        if (!saved) return null;
+
+        const progress = JSON.parse(saved);
+
+        if (
+            progress.rollNumber !== studentName ||
+            progress.questionCount !== questions.length ||
+            !Array.isArray(progress.selectedAnswers)
+        ) {
+
+            localStorage.removeItem(getProgressKey());
+
+            return null;
+
         }
 
-        if (progress.questionCount !== questions.length) {
+        selectedAnswers = progress.selectedAnswers;
 
-            localStorage.removeItem("quizProgress");
+        questionIndex = Number(progress.questionIndex) || 0;
 
-            return false;
+        if (questionIndex < 0 || questionIndex >= questions.length) {
+            questionIndex = 0;
         }
 
-        questionIndex = Number.isInteger(progress.questionIndex)
-            ? Math.max(0, Math.min(progress.questionIndex, questions.length - 1))
-            : 0;
-
-        userAnswers = Array.isArray(progress.userAnswers)
-            ? progress.userAnswers
-            : [];
-
-        selectedAnswers = Array.isArray(progress.selectedAnswers)
-            ? progress.selectedAnswers
-            : [];
-
-        studentName = String(progress.studentName || "").trim();
-
-        if (!studentName) {
-
-            localStorage.removeItem("quizProgress");
-
-            return false;
-        }
-
-        userAnswers.length = questions.length;
-        selectedAnswers.length = questions.length;
-
-        quizStarted = true;
-
-        return true;
+        return progress;
 
     } catch (error) {
 
-        localStorage.removeItem("quizProgress");
+        console.error("Progress restore error:", error);
 
-        return false;
+        localStorage.removeItem(getProgressKey());
+
+        return null;
+
     }
+
 }
 
 
-/* ==========================================
-   20. UPLOAD QUESTIONS TO SERVER
-========================================== */
+/* =========================================
+   19. COMPLETE QUIZ
+========================================= */
 
-async function uploadQuestionsToServer(questionsToUpload) {
+async function completeTest() {
 
-    let message = document.getElementById("uploadMessage");
+    if (resultSubmitting) return;
 
-    let password = sessionStorage.getItem("adminPassword") || "";
-
-    if (!message) {
-        alert('Add an element with id="uploadMessage" to import.html.');
-        return false;
+    // Prevent empty quiz submission
+    if (questions.length === 0) {
+        showMessage("feedback", "No questions available.", true);
+        return;
     }
 
-    if (!password) {
-        message.innerText = "Please log in as admin first.";
-        return false;
-    }
+    resultSubmitting = true;
 
-    if (!Array.isArray(questionsToUpload) ||
-        questionsToUpload.length === 0) {
+    const saveNextBtn = getElement("saveNextBtn");
 
-        message.innerText = "Import valid questions first.";
+    if (saveNextBtn) {
 
-        return false;
+        saveNextBtn.disabled = true;
+        saveNextBtn.textContent = "Submitting...";
+
     }
 
     try {
 
-        message.innerText = "Uploading questions to server...";
+        // Prepare all answers.
+        // Unanswered questions will be sent as empty strings.
+        const answers = questions.map(function (question, index) {
 
-        let response = await fetch("/api/admin/questions", {
+            return {
+                questionId: question._id,
+                answer: selectedAnswers[index] || ""
+            };
+
+        });
+
+        const response = await fetch("/api/quiz/results", {
 
             method: "POST",
 
-            headers: {
-                "Content-Type": "application/json",
-                "x-admin-password": password
-            },
+            headers: getStudentHeaders(),
 
             body: JSON.stringify({
-                questions: questionsToUpload
+                answers: answers
             })
 
         });
 
-        let data = await response.json();
+        const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.message || "Question upload failed.");
+        if (!response.ok || !data.success) {
+
+            if (response.status === 401) {
+
+                localStorage.removeItem(TOKEN_KEY);
+                localStorage.removeItem(ROLL_KEY);
+                localStorage.removeItem(getProgressKey());
+
+                studentToken = "";
+                studentName = "";
+
+            }
+
+            throw new Error(data.message || "Could not submit quiz.");
+
         }
 
-        message.innerText =
-            data.message || "Questions uploaded successfully.";
+        // Remove saved progress after successful submission.
+        localStorage.removeItem(getProgressKey());
 
-        return true;
+        score = data.score;
+
+        showResultScreen(data);
 
     } catch (error) {
 
-        message.innerText = error.message;
+        console.error("Quiz submission error:", error);
 
-        console.error("Question upload error:", error);
+        resultSubmitting = false;
 
-        return false;
+        if (saveNextBtn) {
+
+            saveNextBtn.disabled = false;
+            saveNextBtn.textContent =
+                questionIndex === questions.length - 1
+                    ? "Submit Quiz"
+                    : "Save & Next";
+
+        }
+
+        showMessage(
+            "feedback",
+            error.message,
+            true
+        );
+
     }
+
 }
 
 
-/* ==========================================
-   21. IMPORT QUESTIONS FROM TEXT FILE
-========================================== */
+/* =========================================
+   20. SHOW RESULT SCREEN
+========================================= */
 
-function importQuestions() {
+async function showResultScreen(data) {
 
-    let fileInput = document.getElementById("questionFile");
-    let message = document.getElementById("importMessage");
-
-    let file = fileInput && fileInput.files[0];
-
-    if (!message) return;
-
-    if (!file) {
-
-        message.innerText = "Please select a text file.";
-
-        return;
-    }
-
-    let reader = new FileReader();
-
-    reader.onload = async function (event) {
-
-        let text = String(event.target.result || "").trim();
-
-        let blocks = text.split(/\r?\n\s*\r?\n/);
-
-        let importedQuestions = [];
-
-        for (let block of blocks) {
-
-            let lines = block.split(/\r?\n/);
-
-            let question = lines[0].trim();
-
-            let options = [];
-
-            let answerLetter = "";
-
-            for (let i = 1; i < lines.length; i++) {
-
-                let line = lines[i].trim();
-
-                if (/^ANSWER\s*:/i.test(line)) {
-
-                    answerLetter = line.split(":")[1]
-                        .trim().toUpperCase();
-
-                } else {
-
-                    let match = line.match(/^([A-Z])\.\s*(.+)$/i);
-
-                    if (match) {
-
-                        options.push({
-                            letter: match[1].toUpperCase(),
-                            text: match[2].trim()
-                        });
-                    }
-                }
-            }
-
-            let validAnswer = options.some(function (option) {
-                return option.letter === answerLetter;
-            });
-
-            if (
-                question &&
-                options.length >= 2 &&
-                /^[A-Z]$/.test(answerLetter) &&
-                validAnswer
-            ) {
-
-                importedQuestions.push({
-
-                    question: question,
-                    options: options,
-                    answer: answerLetter
-
-                });
-            }
-        }
-
-        if (importedQuestions.length === 0) {
-
-            message.innerText =
-                "Invalid format. Check your question, options and ANSWER line.";
-
-            return;
-        }
-
-        let uploaded = await uploadQuestionsToServer(importedQuestions);
-
-        if (!uploaded) {
-
-            message.innerText =
-                "Questions were not uploaded. Check admin login and server.";
-
-            return;
-        }
-
-        questions = importedQuestions;
-
-        localStorage.setItem("importedFileName", file.name);
-
-        let fileNameElement = document.getElementById("fileName");
-
-        if (fileNameElement) {
-            fileNameElement.innerText = "Imported File: " + file.name;
-        }
-
-        message.innerText =
-            importedQuestions.length + " questions uploaded successfully.";
-
-        showCorrectScreen();
-    };
-
-    reader.onerror = function () {
-
-        message.innerText = "Unable to read the selected file.";
-    };
-
-    reader.readAsText(file);
-}
-
-
-/* ==========================================
-   22. IMPORT TYPED QUESTIONS
-========================================== */
-
-async function importTypedQuestions() {
-
-    let input = document.getElementById("typedQuestions");
-    let message = document.getElementById("typedImportMessage");
-
-    if (!input || !message) return;
-
-    let text = input.value.trim();
-
-    if (!text) {
-
-        message.innerText = "Please enter your questions.";
-
-        return;
-    }
-
-    let blocks = text.split(/\r?\n\s*\r?\n/);
-
-    let importedQuestions = [];
-    let errors = [];
-
-    blocks.forEach(function (block, index) {
-
-        let lines = block.split(/\r?\n/)
-            .map(function (line) {
-                return line.trim();
-            })
-            .filter(function (line) {
-                return line !== "";
-            });
-
-        let question = "";
-        let options = {};
-        let answer = "";
-
-        lines.forEach(function (line) {
-
-            let answerMatch = line.match(/^ANSWER\s*:\s*([A-Z])$/i);
-
-            if (answerMatch) {
-
-                answer = answerMatch[1].toUpperCase();
-
-                return;
-            }
-
-            let optionMatch = line.match(/^([A-Z])\s*[.)\-:]\s*(.+)$/i);
-
-            if (optionMatch) {
-
-                options[optionMatch[1].toUpperCase()] =
-                    optionMatch[2].trim();
-
-                return;
-            }
-
-            question += (question ? " " : "") + line;
-        });
-
-        let letters = Object.keys(options).sort();
-
-        if (!question) {
-
-            errors.push("Question " + (index + 1) + ": Missing question text.");
-
-            return;
-        }
-
-        if (letters.length < 2) {
-
-            errors.push("Question " + (index + 1) + ": At least 2 options required.");
-
-            return;
-        }
-
-        if (!answer || !options[answer]) {
-
-            errors.push("Question " + (index + 1) + ": Correct answer is invalid.");
-
-            return;
-        }
-
-        importedQuestions.push({
-
-            question: question,
-
-            options: letters.map(function (letter) {
-
-                return {
-                    letter: letter,
-                    text: options[letter]
-                };
-
-            }),
-
-            answer: answer
-
-        });
-    });
-
-    if (importedQuestions.length === 0) {
-
-        message.innerText =
-            "No valid questions found.\n" + errors.join("\n");
-
-        return;
-    }
-
-    let uploaded = await uploadQuestionsToServer(importedQuestions);
-
-    if (!uploaded) {
-
-        message.innerText =
-            "Upload failed. Check admin login and server.";
-
-        return;
-    }
-
-    questions = importedQuestions;
-
-    localStorage.setItem("importedFileName", "Typed Questions");
-
-    message.innerText =
-        importedQuestions.length +
-        " questions uploaded successfully." +
-        (errors.length ? "\nSkipped:\n" + errors.join("\n") : "");
-
-    showCorrectScreen();
-}
-
-
-/* ==========================================
-   23. SAVE QUIZ TITLE
-========================================== */
-
-function saveQuizTitle() {
-
-    let titleInput = document.getElementById("quizTitle");
-    let message = document.getElementById("titleMessage");
-
-    if (!titleInput || !message) return;
-
-    let title = titleInput.value.trim();
-
-    if (!title) {
-
-        message.innerText = "Please enter a quiz title!";
-
-        return;
-    }
-
-    localStorage.setItem("quizTitle", title);
-
-    message.innerText = "Quiz title saved successfully!";
-
-    let displayTitle = document.getElementById("displayQuizTitle");
-
-    if (displayTitle) {
-        displayTitle.innerText = title;
-    }
-}
-
-
-/* ==========================================
-   24. CLEAR LOCAL QUESTIONS
-========================================== */
-
-function clearQuestions() {
-
-    questions = [];
-
-    score = 0;
-    questionIndex = 0;
-    userAnswers = [];
-    selectedAnswers = [];
     quizStarted = false;
 
-    localStorage.removeItem("quizProgress");
-    localStorage.removeItem("importedFileName");
+    const quizScreen = getElement("quizScreen");
+    const resultScreen = getElement("resultScreen");
 
-    let message = document.getElementById("importMessage");
-    let fileNameElement = document.getElementById("fileName");
+    if (quizScreen) quizScreen.style.display = "none";
+    if (resultScreen) resultScreen.style.display = "block";
 
-    if (message) {
+    const resultMessage = getElement("resultMessage");
+    const finalScore = getElement("finalScore");
+    const finalPercentage = getElement("finalPercentage");
 
-        message.innerText =
-            "Local question display cleared. Database questions remain unchanged.";
+    if (resultMessage) {
+
+        resultMessage.textContent =
+            "Result for Roll Number: " + studentName;
+
     }
 
-    if (fileNameElement) {
-        fileNameElement.innerText = "No file imported yet";
+    if (finalScore) {
+
+        finalScore.textContent =
+            data.score + " / " + data.total;
+
     }
 
-    showCorrectScreen();
+    if (finalPercentage) {
+
+        finalPercentage.textContent =
+            data.percentage + "%";
+
+    }
+
+    await checkStudentReviewPermission(data.resultId);
+
 }
 
 
-/* ==========================================
-   25. CONFIRMATION BOX
-========================================== */
+/* =========================================
+   21. CHECK STUDENT REVIEW PERMISSION
+========================================= */
 
-function showConfirm(message, action) {
+async function checkStudentReviewPermission(resultId) {
 
-    let confirmBox = document.getElementById("confirmBox");
-    let confirmMessage = document.getElementById("confirmMessage");
+    const reviewContainer = getElement("answerReview");
+    const thankYou = getElement("thankYouMessage");
 
-    if (!confirmBox || !confirmMessage) {
-
-        if (window.confirm(message)) {
-            action();
-        }
-
-        return;
-    }
-
-    confirmMessage.innerText = message;
-
-    confirmAction = action;
-
-    confirmBox.style.display = "block";
-}
-
-
-function confirmYes() {
-
-    let confirmBox = document.getElementById("confirmBox");
-
-    if (confirmBox) {
-        confirmBox.style.display = "none";
-    }
-
-    if (typeof confirmAction === "function") {
-
-        let action = confirmAction;
-
-        confirmAction = null;
-
-        action();
-    }
-}
-
-
-function confirmNo() {
-
-    let confirmBox = document.getElementById("confirmBox");
-
-    if (confirmBox) {
-        confirmBox.style.display = "none";
-    }
-
-    confirmAction = null;
-}
-
-
-/* ==========================================
-   26. CANCEL TEST
-========================================== */
-
-function cancelTest() {
-
-    showConfirm(
-        "Are you sure you want to cancel this test?",
-        function () {
-
-            quizStarted = false;
-
-            localStorage.removeItem("quizProgress");
-
-            score = 0;
-            questionIndex = 0;
-            userAnswers = [];
-            selectedAnswers = [];
-            studentName = "";
-
-            if (document.fullscreenElement) {
-
-                document.exitFullscreen().catch(function () {});
-            }
-
-            let quizScreen = document.getElementById("quizScreen");
-            let resultScreen = document.getElementById("resultScreen");
-            let passwordScreen = document.getElementById("passwordScreen");
-            let startScreen = document.getElementById("startScreen");
-            let cancelBtn = document.getElementById("cancelBtn");
-
-            if (quizScreen) quizScreen.style.display = "none";
-            if (resultScreen) resultScreen.style.display = "none";
-            if (passwordScreen) passwordScreen.style.display = "none";
-            if (startScreen) startScreen.style.display = "block";
-            if (cancelBtn) cancelBtn.style.display = "none";
-
-            let nameInput = document.getElementById("studentName");
-
-            if (nameInput) nameInput.value = "";
-
-            showMessage("Test cancelled successfully.");
-        }
-    );
-}
-
-
-/* ==========================================
-   27. ADMIN REVIEW SETTING
-========================================== */
-
-async function loadAdminReviewSetting() {
-
-    let password = sessionStorage.getItem("adminPassword");
-
-    if (!password) return;
+    if (reviewContainer) reviewContainer.style.display = "none";
+    if (thankYou) thankYou.style.display = "block";
 
     try {
 
-        let response = await fetch("/api/admin/review-setting", {
+        const response = await fetch("/api/quiz/review-setting");
 
-            headers: {
-                "x-admin-password": password
-            }
+        const data = await response.json();
 
-        });
+        reviewEnabled = data.success && data.reviewEnabled === true;
 
-        let data = await response.json();
+        if (reviewEnabled && resultId) {
 
-        if (!response.ok) {
+            await showFinalReview(resultId);
 
-            throw new Error(
-                data.message || "Unable to load review setting."
-            );
         }
-
-        reviewEnabled = data.reviewEnabled === true;
-
-        updateReviewButton();
 
     } catch (error) {
 
         console.error("Review setting error:", error);
 
-        let message = document.getElementById("reviewSettingMessage");
-
-        if (message) {
-            message.innerText = error.message;
-        }
     }
+
 }
 
 
-function updateReviewButton() {
+/* =========================================
+   22. SHOW ANSWER REVIEW
+========================================= */
 
-    let button = document.getElementById("reviewToggleBtn");
-
-    if (button) {
-
-        button.innerText = reviewEnabled
-            ? "Disable Student Review"
-            : "Enable Student Review";
-    }
-
-    let status = document.getElementById("reviewStatus");
-
-    if (status) {
-
-        status.innerText = reviewEnabled
-            ? "Student answer review is currently ENABLED."
-            : "Student answer review is currently DISABLED.";
-    }
-}
-
-
-async function toggleStudentReview() {
-
-    let password = sessionStorage.getItem("adminPassword");
-
-    let message = document.getElementById("reviewSettingMessage");
-
-    if (!password) {
-
-        if (message) {
-            message.innerText = "Please log in as admin first.";
-        }
-
-        return;
-    }
+async function showFinalReview(resultId) {
 
     try {
 
-        let response = await fetch("/api/admin/review-setting", {
+        const response = await fetch(
+            "/api/quiz/results/" + encodeURIComponent(resultId) + "/review",
+            {
+                headers: getStudentHeaders()
+            }
+        );
 
-            method: "POST",
+        const data = await response.json();
 
-            headers: {
-                "Content-Type": "application/json",
-                "x-admin-password": password
-            },
+        if (!response.ok || !data.success) {
 
-            body: JSON.stringify({
-                reviewEnabled: !reviewEnabled
-            })
+            throw new Error(data.message || "Answer review is unavailable.");
+
+        }
+
+        const reviewContainer = getElement("answerReview");
+        const reviewContent = getElement("answerReviewContent");
+        const thankYou = getElement("thankYouMessage");
+
+        if (!reviewContainer || !reviewContent) return;
+
+        reviewContent.innerHTML = "";
+
+        data.feedback.forEach(function (item, index) {
+
+            const card = document.createElement("div");
+
+            card.className = "review-question";
+
+            const questionTitle = document.createElement("h4");
+
+            questionTitle.textContent =
+                "Question " + (index + 1) + ": " + item.question;
+
+            card.appendChild(questionTitle);
+
+            if (item.imageUrl) {
+
+                const image = document.createElement("img");
+
+                image.src = item.imageUrl;
+                image.alt = "Question image";
+
+                card.appendChild(image);
+
+            }
+
+            const selected = document.createElement("p");
+
+            selected.textContent =
+                "Your Answer: " + item.selectedAnswer;
+
+            const correct = document.createElement("p");
+
+            correct.textContent =
+                "Correct Answer: " + item.correctAnswer;
+
+            const status = document.createElement("p");
+
+            status.textContent = item.isCorrect
+                ? "Correct"
+                : "Incorrect";
+
+            status.className = item.isCorrect
+                ? "review-correct"
+                : "review-wrong";
+
+            card.appendChild(selected);
+            card.appendChild(correct);
+            card.appendChild(status);
+
+            reviewContent.appendChild(card);
 
         });
 
-        let data = await response.json();
+        reviewContainer.style.display = "block";
 
-        if (!response.ok) {
-
-            throw new Error(
-                data.message || "Unable to update review setting."
-            );
-        }
-
-        reviewEnabled = data.reviewEnabled === true;
-
-        updateReviewButton();
-
-        if (message) {
-            message.innerText = data.message || "Review setting updated.";
+        if (thankYou) {
+            thankYou.style.display = "none";
         }
 
     } catch (error) {
 
-        if (message) {
-            message.innerText = error.message;
+        console.error("Answer review error:", error);
+
+        const thankYou = getElement("thankYouMessage");
+
+        if (thankYou) {
+
+            thankYou.style.display = "block";
+
+            thankYou.textContent =
+                "Your quiz was submitted successfully. Answer review is currently unavailable.";
+
         }
 
-        console.error("Review update error:", error);
     }
+
 }
 
 
-/* ==========================================
-   28. STUDENT REVIEW PERMISSION
-========================================== */
+/* =========================================
+   23. RESTART QUIZ
+========================================= */
 
-async function checkStudentReviewPermission() {
+function restartQuiz() {
 
-    try {
+    score = 0;
+    questionIndex = 0;
 
-        let response = await fetch("/api/quiz/review-setting", {
-            cache: "no-store"
-        });
+    selectedAnswers = [];
 
-        let data = await response.json();
+    quizStarted = false;
+    resultSubmitting = false;
 
-        return response.ok && data.reviewEnabled === true;
-
-    } catch (error) {
-
-        console.error("Student review permission error:", error);
-
-        return false;
+    if (studentName) {
+        localStorage.removeItem(getProgressKey());
     }
+
+    const resultScreen = getElement("resultScreen");
+    const passwordScreen = getElement("passwordScreen");
+    const startScreen = getElement("startScreen");
+
+    if (resultScreen) resultScreen.style.display = "none";
+    if (passwordScreen) passwordScreen.style.display = "none";
+    if (startScreen) startScreen.style.display = "block";
+
+    showCorrectScreen();
+
 }
 
 
-/* ==========================================
-   29. ADMIN LOGIN
-========================================== */
+/* =========================================
+   24. CANCEL QUIZ
+========================================= */
+
+function cancelTest() {
+
+    showConfirmation(
+        "Are you sure you want to cancel this test? Your saved progress will be deleted.",
+        function () {
+
+            if (studentName) {
+                localStorage.removeItem(getProgressKey());
+            }
+
+            selectedAnswers = [];
+            questionIndex = 0;
+
+            quizStarted = false;
+
+            studentToken = "";
+            studentName = "";
+
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(ROLL_KEY);
+
+            showCorrectScreen();
+
+        }
+    );
+
+}
+
+
+/* =========================================
+   25. ADMIN LOGIN
+========================================= */
 
 async function adminLogin() {
 
-    let passwordInput = document.getElementById("adminPassword");
-    let message = document.getElementById("adminMessage");
+    const password = getElement("adminPassword")?.value;
 
-    let password = passwordInput
-        ? passwordInput.value
-        : "";
+    if (!password) {
 
-    if (!message) return;
-
-    if (!password.trim()) {
-
-        message.innerText = "Please enter admin password.";
+        showMessage(
+            "adminMessage",
+            "Enter admin password.",
+            true
+        );
 
         return;
+
     }
 
     try {
 
-        let response = await fetch("/api/admin/login", {
+        const response = await fetch("/api/admin/login", {
 
             method: "POST",
 
@@ -1731,382 +1398,1308 @@ async function adminLogin() {
 
         });
 
-        let data = await response.json();
+        const data = await response.json();
 
         if (!response.ok || !data.success) {
 
-            message.innerText =
-                data.message || "Admin login failed.";
+            throw new Error(data.message || "Admin login failed.");
 
-            return;
         }
 
         sessionStorage.setItem("adminPassword", password);
 
-        message.innerText = "Admin login successful.";
-
-        let adminPanel = document.getElementById("adminPanel");
-        let loginGate = document.getElementById("adminLoginGate");
-        let loginBox = document.getElementById("adminLogin");
-
-        if (adminPanel) adminPanel.style.display = "block";
-        if (loginGate) loginGate.style.display = "none";
-        if (loginBox) loginBox.style.display = "none";
-
-        await loadAdminReviewSetting();
+        showAdminPanel();
 
     } catch (error) {
 
-        console.error("Admin login error:", error);
+        showMessage(
+            "adminMessage",
+            error.message,
+            true
+        );
 
-        message.innerText = "Unable to connect to server.";
     }
+
 }
 
 
-/* ==========================================
-   30. FETCH STUDENT RESULTS
-========================================== */
+/* =========================================
+   26. RESTORE ADMIN SESSION
+========================================= */
 
-async function fetchStudentResults() {
+async function restoreAdminSession() {
 
-    let message = document.getElementById("resultsMessage");
+    const password = getAdminPassword();
 
-    if (!message) return;
+    if (!password) return;
 
     try {
 
-        let password = sessionStorage.getItem("adminPassword");
-
-        if (!password) {
-
-            message.innerText = "Please log in as admin first.";
-
-            return;
-        }
-
-        let response = await fetch("/api/admin/results", {
-
-            headers: {
-                "x-admin-password": password
-            }
-
+        const response = await fetch("/api/admin/review-setting", {
+            headers: getAdminHeaders()
         });
-
-        let data = await response.json();
 
         if (!response.ok) {
 
-            throw new Error(
-                data.message || "Failed to fetch results."
-            );
-        }
-
-        let output = document.getElementById("studentResults");
-
-        if (!output) {
-
-            output = document.createElement("div");
-
-            output.id = "studentResults";
-
-            message.after(output);
-        }
-
-        if (!Array.isArray(data) || data.length === 0) {
-
-            output.innerHTML = "";
-
-            message.innerText = "No student results found.";
+            sessionStorage.removeItem("adminPassword");
 
             return;
+
         }
 
-        output.innerHTML = `
-
-            <table class="results-table">
-
-                <thead>
-                    <tr>
-                        <th>Student Name</th>
-                        <th>Score</th>
-                        <th>Total</th>
-                        <th>Percentage</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    ${data.map(function (student) {
-
-                        return `
-
-                            <tr>
-
-                                <td>${escapeHTML(student.studentName)}</td>
-
-                                <td>${Number(student.score) || 0}</td>
-
-                                <td>${Number(student.total) || 0}</td>
-
-                                <td>${Number(student.percentage) || 0}%</td>
-
-                            </tr>
-
-                        `;
-
-                    }).join("")}
-
-                </tbody>
-
-            </table>
-
-        `;
-
-        message.innerText = "Student results loaded successfully.";
+        showAdminPanel();
 
     } catch (error) {
 
-        message.innerText = error.message;
+        console.error("Admin session error:", error);
 
-        console.error("Fetch results error:", error);
     }
+
 }
 
 
-/* ==========================================
-   31. DELETE ALL QUESTIONS
-========================================== */
+/* =========================================
+   27. SHOW ADMIN PANEL
+========================================= */
 
-async function deleteAllQuestions() {
+function showAdminPanel() {
 
-    if (!sessionStorage.getItem("adminPassword")) {
+    const loginGate = getElement("adminLoginGate");
+    const adminPanel = getElement("adminPanel");
 
-        showMessage("Please log in as admin first.");
+    if (loginGate) loginGate.style.display = "none";
+    if (adminPanel) adminPanel.style.display = "block";
 
-        return;
-    }
+    fetchReviewSetting();
+    fetchStudents();
+    fetchStudentResults();
+    updateQuestionCount();
 
-    showConfirm(
-        "Are you sure you want to delete ALL questions from the database?",
-        async function () {
-
-            let message = document.getElementById("adminMessage");
-
-            try {
-
-                let response = await fetch("/api/admin/questions", {
-
-                    method: "DELETE",
-
-                    headers: {
-                        "x-admin-password":
-                            sessionStorage.getItem("adminPassword") || ""
-                    }
-
-                });
-
-                let data = await response.json();
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.message || "Failed to delete questions."
-                    );
-                }
-
-                questions = [];
-
-                score = 0;
-                questionIndex = 0;
-                userAnswers = [];
-                selectedAnswers = [];
-                quizStarted = false;
-
-                localStorage.removeItem("quizProgress");
-                localStorage.removeItem("importedFileName");
-
-                if (message) {
-
-                    message.innerText =
-                        data.message || "All questions deleted successfully.";
-                }
-
-                showCorrectScreen();
-
-                let fileNameElement = document.getElementById("fileName");
-
-                if (fileNameElement) {
-                    fileNameElement.innerText = "No file imported yet";
-                }
-
-                let importMessage = document.getElementById("importMessage");
-
-                if (importMessage) {
-                    importMessage.innerText = "No questions available.";
-                }
-
-            } catch (error) {
-
-                if (message) {
-                    message.innerText = error.message;
-                }
-
-                console.error("Delete questions error:", error);
-            }
-        }
-    );
 }
 
 
-/* ==========================================
-   32. DELETE ALL RESULTS
-========================================== */
-
-async function deleteAllResults() {
-
-    if (!sessionStorage.getItem("adminPassword")) {
-
-        showMessage("Please log in as admin first.");
-
-        return;
-    }
-
-    showConfirm(
-        "Are you sure you want to delete ALL student results?",
-        async function () {
-
-            let message = document.getElementById("resultsMessage");
-
-            try {
-
-                let response = await fetch("/api/admin/results", {
-
-                    method: "DELETE",
-
-                    headers: {
-                        "x-admin-password":
-                            sessionStorage.getItem("adminPassword") || ""
-                    }
-
-                });
-
-                let data = await response.json();
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.message || "Failed to delete results."
-                    );
-                }
-
-                if (message) {
-
-                    message.innerText =
-                        data.message || "All student results deleted.";
-                }
-
-                let output = document.getElementById("studentResults");
-
-                if (output) {
-                    output.innerHTML = "";
-                }
-
-            } catch (error) {
-
-                if (message) {
-                    message.innerText = error.message;
-                }
-
-                console.error("Delete results error:", error);
-            }
-        }
-    );
-}
-
-
-/* ==========================================
-   33. ADMIN LOGOUT
-========================================== */
+/* =========================================
+   28. ADMIN LOGOUT
+========================================= */
 
 function adminLogout() {
 
     sessionStorage.removeItem("adminPassword");
 
-    let panel = document.getElementById("adminPanel");
-    let gate = document.getElementById("adminLoginGate");
-    let loginBox = document.getElementById("adminLogin");
+    const adminPanel = getElement("adminPanel");
+    const loginGate = getElement("adminLoginGate");
 
-    if (panel) panel.style.display = "none";
-    if (gate) gate.style.display = "block";
-    if (loginBox) loginBox.style.display = "block";
+    if (adminPanel) adminPanel.style.display = "none";
+    if (loginGate) loginGate.style.display = "block";
 
-    let password = document.getElementById("adminPassword");
-
-    if (password) {
-        password.value = "";
+    if (getElement("adminPassword")) {
+        getElement("adminPassword").value = "";
     }
 
-    let message = document.getElementById("adminMessage");
-
-    if (message) {
-        message.innerText = "Logged out successfully.";
-    }
 }
 
 
-/* ==========================================
-   34. KEYBOARD RESTRICTIONS
-========================================== */
+/* =========================================
+   29. SAVE QUIZ TITLE
+========================================= */
 
-// Ctrl + Q returns to the start screen
-document.addEventListener("keydown", function (event) {
+function saveQuizTitle() {
 
-    if (
-        quizStarted &&
-        event.ctrlKey &&
-        event.key.toLowerCase() === "q"
-    ) {
+    const title = getElement("quizTitle")?.value.trim();
 
-        event.preventDefault();
+    if (!title) {
 
-        saveQuizProgress();
+        showMessage(
+            "titleMessage",
+            "Enter a quiz title.",
+            true
+        );
 
-        quizStarted = false;
+        return;
 
-        if (document.fullscreenElement) {
-            document.exitFullscreen().catch(function () {});
+    }
+
+    localStorage.setItem("quizTitle", title);
+
+    showMessage(
+        "titleMessage",
+        "Quiz title saved successfully."
+    );
+
+}
+
+
+/* =========================================
+   30. PARSE QUESTION TEXT
+========================================= */
+
+function parseQuestionText(text) {
+
+    const blocks = text
+        .replace(/\r/g, "")
+        .split(/\n\s*\n/)
+        .filter(function (block) {
+            return block.trim() !== "";
+        });
+
+    const validQuestions = [];
+    const invalidBlocks = [];
+
+    blocks.forEach(function (block, index) {
+
+        const lines = block
+            .split("\n")
+            .map(function (line) {
+                return line.trim();
+            })
+            .filter(Boolean);
+
+        let question = "";
+        let options = [];
+        let answer = "";
+        let imageUrl = "";
+
+        lines.forEach(function (line) {
+
+            const optionMatch = line.match(
+                /^([A-Z])[.)\-:]\s*(.+)$/i
+            );
+
+            const answerMatch = line.match(
+                /^(?:ANSWER|ANS)\s*[:\-]\s*([A-Z])$/i
+            );
+
+            const imageMatch = line.match(
+                /^IMAGE\s*[:\-]\s*(.+)$/i
+            );
+
+            if (optionMatch) {
+
+                options.push({
+                    letter: optionMatch[1].toUpperCase(),
+                    text: optionMatch[2].trim()
+                });
+
+            } else if (answerMatch) {
+
+                answer = answerMatch[1].toUpperCase();
+
+            } else if (imageMatch) {
+
+                imageUrl = imageMatch[1].trim();
+
+            } else {
+
+                question += (question ? " " : "") + line;
+
+            }
+
+        });
+
+        question = question.replace(/^\d+[.)]\s*/, "");
+
+        const optionLetters = new Set(
+            options.map(function (option) {
+                return option.letter;
+            })
+        );
+
+        if (
+            question &&
+            options.length >= 2 &&
+            answer &&
+            optionLetters.has(answer)
+        ) {
+
+            validQuestions.push({
+                question: question,
+                options: options,
+                answer: answer,
+                imageUrl: imageUrl
+            });
+
+        } else {
+
+            invalidBlocks.push(index + 1);
+
         }
 
-        let quizScreen = document.getElementById("quizScreen");
-        let resultScreen = document.getElementById("resultScreen");
-        let startScreen = document.getElementById("startScreen");
+    });
 
-        if (quizScreen) quizScreen.style.display = "none";
-        if (resultScreen) resultScreen.style.display = "none";
-        if (startScreen) startScreen.style.display = "block";
+    return {
+        questions: validQuestions,
+        invalidBlocks: invalidBlocks
+    };
+
+}
+
+
+/* =========================================
+   31. UPLOAD QUESTIONS TO SERVER
+========================================= */
+
+async function uploadQuestionsToServer(questionList) {
+
+    const response = await fetch("/api/admin/questions", {
+
+        method: "POST",
+
+        headers: getAdminHeaders(),
+
+        body: JSON.stringify({
+            questions: questionList
+        })
+
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+
+        throw new Error(data.message || "Question upload failed.");
+
     }
-});
+
+    return data;
+
+}
 
 
-// Prevent Escape from exiting fullscreen during the quiz
+/* =========================================
+   32. IMPORT QUESTIONS FROM TXT
+========================================= */
+
+async function importQuestions() {
+
+    const fileInput = getElement("questionFile");
+
+    if (!fileInput || !fileInput.files.length) {
+
+        showMessage(
+            "importMessage",
+            "Please select a TXT file.",
+            true
+        );
+
+        return;
+
+    }
+
+    const file = fileInput.files[0];
+
+    try {
+
+        const text = await file.text();
+
+        const parsed = parseQuestionText(text);
+
+        if (parsed.questions.length === 0) {
+
+            throw new Error(
+                "No valid questions found. Check your TXT format."
+            );
+
+        }
+
+        const data = await uploadQuestionsToServer(parsed.questions);
+
+        // Remove old local question cache.
+        localStorage.removeItem(QUESTIONS_CACHE_KEY);
+
+        localStorage.setItem("importedFileName", file.name);
+
+        let message = data.message;
+
+        if (parsed.invalidBlocks.length > 0) {
+
+            message += " Invalid question blocks: " +
+                parsed.invalidBlocks.join(", ");
+
+        }
+
+        showMessage("importMessage", message);
+
+        updateQuestionCount();
+
+    } catch (error) {
+
+        showMessage(
+            "importMessage",
+            error.message,
+            true
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   33. IMPORT MANUALLY TYPED QUESTIONS
+========================================= */
+
+async function importTypedQuestions() {
+
+    const text = getElement("typedQuestions")?.value.trim();
+
+    if (!text) {
+
+        showMessage(
+            "typedImportMessage",
+            "Enter your questions first.",
+            true
+        );
+
+        return;
+
+    }
+
+    try {
+
+        const parsed = parseQuestionText(text);
+
+        if (parsed.questions.length === 0) {
+
+            throw new Error(
+                "No valid questions found. Check the question format."
+            );
+
+        }
+
+        const data = await uploadQuestionsToServer(parsed.questions);
+
+        localStorage.removeItem(QUESTIONS_CACHE_KEY);
+
+        let message = data.message;
+
+        if (parsed.invalidBlocks.length > 0) {
+
+            message += " Invalid blocks: " +
+                parsed.invalidBlocks.join(", ");
+
+        }
+
+        showMessage("typedImportMessage", message);
+
+        getElement("typedQuestions").value = "";
+
+        updateQuestionCount();
+
+    } catch (error) {
+
+        showMessage(
+            "typedImportMessage",
+            error.message,
+            true
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   34. UPDATE QUESTION COUNT
+========================================= */
+
+async function updateQuestionCount() {
+
+    const element = getElement("questionCount");
+
+    if (!element) return;
+
+    try {
+
+        const response = await fetch("/api/quiz/questions");
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+
+            element.textContent = data.questions.length;
+
+        }
+
+    } catch (error) {
+
+        element.textContent = "Unable to load";
+
+    }
+
+}
+
+
+/* =========================================
+   35. DELETE ALL QUESTIONS
+========================================= */
+
+function deleteAllQuestions() {
+
+    showConfirmation(
+        "Are you sure you want to delete all quiz questions?",
+        async function () {
+
+            try {
+
+                const response = await fetch("/api/admin/questions", {
+
+                    method: "DELETE",
+
+                    headers: getAdminHeaders()
+
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+
+                    throw new Error(data.message || "Delete failed.");
+
+                }
+
+                localStorage.removeItem(QUESTIONS_CACHE_KEY);
+
+                showMessage(
+                    "uploadMessage",
+                    data.message
+                );
+
+                updateQuestionCount();
+
+            } catch (error) {
+
+                showMessage(
+                    "uploadMessage",
+                    error.message,
+                    true
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================
+   36. ADD ONE STUDENT MANUALLY
+========================================= */
+
+async function addStudent() {
+
+    const rollNumber = getElement("newStudentRollNumber")?.value.trim();
+    const password = getElement("newStudentPassword")?.value;
+
+    if (!rollNumber || !password) {
+
+        showMessage(
+            "studentAddMessage",
+            "Enter roll number and password.",
+            true
+        );
+
+        return;
+
+    }
+
+    try {
+
+        const response = await fetch("/api/admin/students", {
+
+            method: "POST",
+
+            headers: getAdminHeaders(),
+
+            body: JSON.stringify({
+                rollNumber: rollNumber,
+                password: password
+            })
+
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(data.message || "Unable to add student.");
+
+        }
+
+        getElement("newStudentRollNumber").value = "";
+        getElement("newStudentPassword").value = "";
+
+        showMessage(
+            "studentAddMessage",
+            data.message
+        );
+
+        fetchStudents();
+
+    } catch (error) {
+
+        showMessage(
+            "studentAddMessage",
+            error.message,
+            true
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   37. DOWNLOAD STUDENT CSV TEMPLATE
+========================================= */
+
+function downloadStudentCSVTemplate() {
+
+    const csv =
+        "Roll Number,Password\n" +
+        "23CB001,student123\n" +
+        "23CB002,student456\n";
+
+    const blob = new Blob(
+        [csv],
+        { type: "text/csv;charset=utf-8;" }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "student-template.csv";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    link.remove();
+
+    URL.revokeObjectURL(url);
+
+}
+
+
+/* =========================================
+   38. READ CSV FILE
+========================================= */
+
+function parseCSV(text) {
+
+    const rows = [];
+
+    let row = [];
+    let value = "";
+    let insideQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '"' && insideQuotes && next === '"') {
+
+            value += '"';
+            i++;
+
+        } else if (char === '"') {
+
+            insideQuotes = !insideQuotes;
+
+        } else if (char === "," && !insideQuotes) {
+
+            row.push(value.trim());
+            value = "";
+
+        } else if (
+            (char === "\n" || char === "\r") &&
+            !insideQuotes
+        ) {
+
+            if (char === "\r" && next === "\n") {
+                i++;
+            }
+
+            row.push(value.trim());
+
+            if (row.some(function (cell) {
+                return cell !== "";
+            })) {
+                rows.push(row);
+            }
+
+            row = [];
+            value = "";
+
+        } else {
+
+            value += char;
+
+        }
+
+    }
+
+    row.push(value.trim());
+
+    if (row.some(function (cell) {
+        return cell !== "";
+    })) {
+        rows.push(row);
+    }
+
+    return rows;
+
+}
+
+
+/* =========================================
+   39. IMPORT STUDENTS FROM CSV
+========================================= */
+
+async function importStudentsCSV() {
+
+    const fileInput = getElement("studentCSVFile");
+
+    if (!fileInput || !fileInput.files.length) {
+
+        showMessage(
+            "studentImportMessage",
+            "Select a CSV file first.",
+            true
+        );
+
+        return;
+
+    }
+
+    try {
+
+        const text = await fileInput.files[0].text();
+
+        const rows = parseCSV(text);
+
+        if (rows.length < 2) {
+
+            throw new Error("CSV file contains no student records.");
+
+        }
+
+        const headers = rows[0].map(function (header) {
+            return header.trim().toLowerCase();
+        });
+
+        const rollIndex = headers.findIndex(function (header) {
+
+            return header === "roll number" ||
+                header === "rollnumber" ||
+                header === "roll_number";
+
+        });
+
+        const passwordIndex = headers.findIndex(function (header) {
+            return header === "password";
+        });
+
+        if (rollIndex === -1 || passwordIndex === -1) {
+
+            throw new Error(
+                "CSV must contain Roll Number and Password columns."
+            );
+
+        }
+
+        const students = [];
+
+        for (let i = 1; i < rows.length; i++) {
+
+            const rollNumber = rows[i][rollIndex] || "";
+            const password = rows[i][passwordIndex] || "";
+
+            if (!rollNumber || !password) continue;
+
+            students.push({
+                rollNumber: rollNumber,
+                password: password
+            });
+
+        }
+
+        if (students.length === 0) {
+
+            throw new Error("No valid student records found.");
+
+        }
+
+        const response = await fetch("/api/admin/import-students", {
+
+            method: "POST",
+
+            headers: getAdminHeaders(),
+
+            body: JSON.stringify({
+                students: students
+            })
+
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(data.message || "Student import failed.");
+
+        }
+
+        showMessage(
+            "studentImportMessage",
+            data.message
+        );
+
+        fileInput.value = "";
+
+        fetchStudents();
+
+    } catch (error) {
+
+        showMessage(
+            "studentImportMessage",
+            error.message,
+            true
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   40. FETCH STUDENT LIST
+========================================= */
+
+async function fetchStudents() {
+
+    const list = getElement("studentList");
+
+    if (!list || !getAdminPassword()) return;
+
+    try {
+
+        const response = await fetch("/api/admin/students", {
+
+            headers: getAdminHeaders()
+
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(data.message || "Unable to load students.");
+
+        }
+
+        const students = data.students || [];
+
+        list.innerHTML = "";
+
+        const count = getElement("studentCount");
+
+        if (count) {
+            count.textContent = "Total Students: " + students.length;
+        }
+
+        if (students.length === 0) {
+
+            list.innerHTML = `
+                <tr>
+                    <td colspan="4">No students registered.</td>
+                </tr>
+            `;
+
+            return;
+
+        }
+
+        students.forEach(function (student, index) {
+
+            const tr = document.createElement("tr");
+
+            const number = document.createElement("td");
+            number.textContent = index + 1;
+
+            const roll = document.createElement("td");
+            roll.textContent = student.rollNumber;
+
+            const status = document.createElement("td");
+            status.textContent = student.isActive ? "Active" : "Inactive";
+
+            const action = document.createElement("td");
+
+            const deleteButton = document.createElement("button");
+
+            deleteButton.textContent = "Delete";
+            deleteButton.className = "danger-button";
+
+            deleteButton.addEventListener("click", function () {
+
+                deleteStudent(student._id, student.rollNumber);
+
+            });
+
+            action.appendChild(deleteButton);
+
+            tr.appendChild(number);
+            tr.appendChild(roll);
+            tr.appendChild(status);
+            tr.appendChild(action);
+
+            list.appendChild(tr);
+
+        });
+
+    } catch (error) {
+
+        showMessage(
+            "studentListMessage",
+            error.message,
+            true
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   41. DELETE ONE STUDENT
+========================================= */
+
+function deleteStudent(id, rollNumber) {
+
+    showConfirmation(
+        "Delete student " + rollNumber + "?",
+        async function () {
+
+            try {
+
+                const response = await fetch(
+                    "/api/admin/students/" + encodeURIComponent(id),
+                    {
+                        method: "DELETE",
+                        headers: getAdminHeaders()
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+
+                    throw new Error(data.message || "Student deletion failed.");
+
+                }
+
+                showMessage(
+                    "studentListMessage",
+                    data.message
+                );
+
+                fetchStudents();
+
+            } catch (error) {
+
+                showMessage(
+                    "studentListMessage",
+                    error.message,
+                    true
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================
+   42. FETCH REVIEW SETTING
+========================================= */
+
+async function fetchReviewSetting() {
+
+    try {
+
+        const response = await fetch("/api/admin/review-setting", {
+
+            headers: getAdminHeaders()
+
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(data.message || "Unable to load setting.");
+
+        }
+
+        reviewEnabled = data.reviewEnabled;
+
+        updateReviewStatus();
+
+    } catch (error) {
+
+        showMessage(
+            "reviewSettingMessage",
+            error.message,
+            true
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   43. UPDATE REVIEW STATUS
+========================================= */
+
+function updateReviewStatus() {
+
+    const status = getElement("reviewStatus");
+    const button = getElement("reviewToggleBtn");
+
+    if (status) {
+
+        status.textContent = reviewEnabled
+            ? "Enabled"
+            : "Disabled";
+
+        status.style.color = reviewEnabled
+            ? "#198754"
+            : "#dc3545";
+
+    }
+
+    if (button) {
+
+        button.textContent = reviewEnabled
+            ? "Disable Student Review"
+            : "Enable Student Review";
+
+    }
+
+}
+
+
+/* =========================================
+   44. TOGGLE STUDENT REVIEW
+========================================= */
+
+async function toggleStudentReview() {
+
+    const newValue = !reviewEnabled;
+
+    try {
+
+        const response = await fetch("/api/admin/review-setting", {
+
+            method: "POST",
+
+            headers: getAdminHeaders(),
+
+            body: JSON.stringify({
+                reviewEnabled: newValue
+            })
+
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(data.message || "Unable to update setting.");
+
+        }
+
+        reviewEnabled = data.reviewEnabled;
+
+        updateReviewStatus();
+
+        showMessage(
+            "reviewSettingMessage",
+            data.message
+        );
+
+    } catch (error) {
+
+        showMessage(
+            "reviewSettingMessage",
+            error.message,
+            true
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   45. FETCH STUDENT RESULTS
+========================================= */
+
+async function fetchStudentResults() {
+
+    const container = getElement("studentResults");
+
+    if (!container || !getAdminPassword()) return;
+
+    try {
+
+        const response = await fetch("/api/admin/results", {
+
+            headers: getAdminHeaders()
+
+        });
+
+        const results = await response.json();
+
+        if (!response.ok || !Array.isArray(results)) {
+
+            throw new Error(results.message || "Unable to load results.");
+
+        }
+
+        container.innerHTML = "";
+
+        if (results.length === 0) {
+
+            container.textContent = "No student results available.";
+
+            return;
+
+        }
+
+        const table = document.createElement("table");
+
+        table.className = "admin-table";
+
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Roll Number</th>
+                    <th>Score</th>
+                    <th>Total</th>
+                    <th>Percentage</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        `;
+
+        const tbody = table.querySelector("tbody");
+
+        results.forEach(function (result, index) {
+
+            const tr = document.createElement("tr");
+
+            const values = [
+                index + 1,
+                result.rollNumber || result.studentName,
+                result.score,
+                result.total,
+                result.percentage + "%",
+                result.createdAt
+                    ? new Date(result.createdAt).toLocaleString()
+                    : "-"
+            ];
+
+            values.forEach(function (value) {
+
+                const td = document.createElement("td");
+
+                td.textContent = value;
+
+                tr.appendChild(td);
+
+            });
+
+            tbody.appendChild(tr);
+
+        });
+
+        container.appendChild(table);
+
+    } catch (error) {
+
+        container.textContent = error.message;
+
+        showMessage(
+            "resultsMessage",
+            error.message,
+            true
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   46. DELETE ALL RESULTS
+========================================= */
+
+function deleteAllResults() {
+
+    showConfirmation(
+        "Are you sure you want to delete all student results?",
+        async function () {
+
+            try {
+
+                const response = await fetch("/api/admin/results", {
+
+                    method: "DELETE",
+
+                    headers: getAdminHeaders()
+
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+
+                    throw new Error(data.message || "Delete results failed.");
+
+                }
+
+                showMessage(
+                    "resultsMessage",
+                    data.message
+                );
+
+                fetchStudentResults();
+
+            } catch (error) {
+
+                showMessage(
+                    "resultsMessage",
+                    error.message,
+                    true
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================
+   47. CONFIRMATION POPUP
+========================================= */
+
+function showConfirmation(message, action) {
+
+    const box = getElement("confirmBox");
+    const customMessage = getElement("customMessage");
+
+    confirmAction = action;
+
+    if (customMessage) {
+        customMessage.textContent = message;
+    }
+
+    if (box) {
+        box.style.display = "flex";
+    }
+
+}
+
+
+function confirmYes() {
+
+    const box = getElement("confirmBox");
+
+    if (box) {
+        box.style.display = "none";
+    }
+
+    const action = confirmAction;
+
+    confirmAction = null;
+
+    if (typeof action === "function") {
+        action();
+    }
+
+}
+
+
+function confirmNo() {
+
+    const box = getElement("confirmBox");
+
+    if (box) {
+        box.style.display = "none";
+    }
+
+    confirmAction = null;
+
+}
+
+
+/* =========================================
+   48. KEYBOARD CONTROLS
+========================================= */
+
 document.addEventListener("keydown", function (event) {
 
     if (!quizStarted) return;
 
     if (event.key === "Escape") {
-
         event.preventDefault();
-
-        event.stopPropagation();
     }
+
 });
 
 
-// Disable right-click during the quiz
+/* =========================================
+   49. PREVENT RIGHT CLICK DURING QUIZ
+========================================= */
+
 document.addEventListener("contextmenu", function (event) {
 
     if (quizStarted) {
         event.preventDefault();
     }
+
+});
+
+
+/* =========================================
+   50. SAVE PROGRESS BEFORE PAGE RELOAD
+========================================= */
+
+window.addEventListener("beforeunload", function () {
+
+    if (quizStarted && studentToken) {
+
+        const selected = document.querySelector(
+            'input[name="quizAnswer"]:checked'
+        );
+
+        if (selected) {
+            selectedAnswers[questionIndex] = selected.value;
+        }
+
+        saveQuizProgress();
+
+    }
+
 });

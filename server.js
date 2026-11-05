@@ -7,18 +7,21 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const path = require("path");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 dotenv.config();
 
 const app = express();
-app.use(express.json({ limit: "2mb" }));
 
-// Serve frontend files from the public folder.
+app.use(express.json({ limit: "10mb" }));
 app.use(express.static(__dirname));
 
 app.get("/", function (req, res) {
     res.sendFile(path.join(__dirname, "quiz.html"));
 });
+
+
 /* =========================================
    2. QUESTION MODEL
 ========================================= */
@@ -57,29 +60,64 @@ const questionSchema = new mongoose.Schema({
         required: true,
         trim: true,
         uppercase: true
+    },
+
+    imageUrl: {
+        type: String,
+        default: ""
     }
 });
 
 const Question = mongoose.model("Question", questionSchema);
-const settingSchema = new mongoose.Schema({
-    reviewEnabled: {
-        type: Boolean,
-        default: false
-    }
-});
-
-const Setting = mongoose.model("Setting", settingSchema);
 
 
 /* =========================================
-   3. QUIZ RESULT MODEL
+   3. STUDENT MODEL
+========================================= */
+
+const studentSchema = new mongoose.Schema({
+    rollNumber: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        uppercase: true
+    },
+
+    password: {
+        type: String,
+        required: true
+    },
+
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+const Student = mongoose.model("Student", studentSchema);
+
+
+/* =========================================
+   4. QUIZ RESULT MODEL
 ========================================= */
 
 const resultSchema = new mongoose.Schema({
+    rollNumber: {
+        type: String,
+        required: true
+    },
+
     studentName: {
         type: String,
         required: true
     },
+
     score: {
         type: Number,
         required: true
@@ -110,7 +148,21 @@ const Result = mongoose.model("Result", resultSchema);
 
 
 /* =========================================
-   4. ADMIN PASSWORD CHECK
+   5. SETTINGS MODEL
+========================================= */
+
+const settingSchema = new mongoose.Schema({
+    reviewEnabled: {
+        type: Boolean,
+        default: false
+    }
+});
+
+const Setting = mongoose.model("Setting", settingSchema);
+
+
+/* =========================================
+   6. ADMIN AUTHENTICATION
 ========================================= */
 
 function checkAdmin(req, res, next) {
@@ -135,48 +187,379 @@ function checkAdmin(req, res, next) {
 
 
 /* =========================================
-   5. ADMIN LOGIN API
+   7. STUDENT AUTHENTICATION
+========================================= */
+
+function checkStudent(req, res, next) {
+    try {
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return res.status(401).json({
+                success: false,
+                message: "Please log in to continue."
+            });
+        }
+
+        const token = authHeader.split(" ")[1];
+
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
+
+        req.student = decoded;
+
+        next();
+
+    } catch (error) {
+        return res.status(401).json({
+            success: false,
+            message: "Student session expired. Please log in again."
+        });
+    }
+}
+
+
+/* =========================================
+   8. ADMIN LOGIN API
 ========================================= */
 
 app.post("/api/admin/login", function (req, res) {
+    const password = req.body?.password;
+
+    if (!process.env.ADMIN_PASSWORD) {
+        return res.status(500).json({
+            success: false,
+            message: "ADMIN_PASSWORD is missing from .env."
+        });
+    }
+
+    if (
+        typeof password !== "string" ||
+        password !== process.env.ADMIN_PASSWORD
+    ) {
+        return res.status(401).json({
+            success: false,
+            message: "Incorrect admin password."
+        });
+    }
+
+    res.json({
+        success: true,
+        message: "Admin login successful."
+    });
+});
+
+
+/* =========================================
+   9. STUDENT LOGIN API
+========================================= */
+
+app.post("/api/student/login", async function (req, res) {
     try {
+        const rollNumber = String(
+            req.body?.rollNumber || ""
+        ).trim().toUpperCase();
+
         const password = req.body?.password;
 
-        if (!process.env.ADMIN_PASSWORD) {
-            return res.status(500).json({
+        if (!rollNumber || typeof password !== "string" || !password) {
+            return res.status(400).json({
                 success: false,
-                message: "ADMIN_PASSWORD is missing from .env."
+                message: "Enter your roll number and password."
             });
         }
 
-        if (
-            typeof password !== "string" ||
-            password !== process.env.ADMIN_PASSWORD
-        ) {
+        const student = await Student.findOne({
+            rollNumber: rollNumber
+        });
+
+        if (!student || !student.isActive) {
             return res.status(401).json({
                 success: false,
-                message: "Incorrect admin password."
+                message: "Invalid roll number or password."
             });
         }
 
-        return res.json({
+        const passwordMatch = await bcrypt.compare(
+            password,
+            student.password
+        );
+
+        if (!passwordMatch) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid roll number or password."
+            });
+        }
+
+        if (!process.env.JWT_SECRET) {
+            return res.status(500).json({
+                success: false,
+                message: "JWT_SECRET is missing from .env."
+            });
+        }
+
+        const token = jwt.sign(
+            {
+                studentId: student._id.toString(),
+                rollNumber: student.rollNumber
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "8h"
+            }
+        );
+
+        res.json({
             success: true,
-            message: "Admin login successful."
+            message: "Login successful.",
+            token: token,
+            rollNumber: student.rollNumber
         });
 
     } catch (error) {
-        console.error("Admin login error:", error);
+        console.error("Student login error:", error);
 
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
-            message: "Admin login failed."
+            message: "Student login failed."
         });
     }
 });
 
 
 /* =========================================
-   6. UPLOAD QUESTIONS TO MONGODB
+   10. ADMIN: ADD ONE STUDENT
+========================================= */
+
+app.post("/api/admin/students", checkAdmin, async function (req, res) {
+    try {
+        const rollNumber = String(
+            req.body?.rollNumber || ""
+        ).trim().toUpperCase();
+
+        const password = req.body?.password;
+
+        if (
+            !rollNumber ||
+            typeof password !== "string" ||
+            password.length < 4
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Enter a roll number and password with at least 4 characters."
+            });
+        }
+
+        const existingStudent = await Student.findOne({
+            rollNumber: rollNumber
+        });
+
+        if (existingStudent) {
+            return res.status(409).json({
+                success: false,
+                message: "This roll number already exists."
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await Student.create({
+            rollNumber: rollNumber,
+            password: hashedPassword
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Student added successfully."
+        });
+
+    } catch (error) {
+        console.error("Add student error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Unable to add student."
+        });
+    }
+});
+
+
+/* =========================================
+   11. ADMIN: IMPORT MULTIPLE STUDENTS
+========================================= */
+
+app.post("/api/admin/import-students", checkAdmin, async function (req, res) {
+    try {
+        const students = req.body?.students;
+
+        if (!Array.isArray(students) || students.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No student records received."
+            });
+        }
+
+        if (students.length > 1000) {
+            return res.status(400).json({
+                success: false,
+                message: "Import a maximum of 1000 students at a time."
+            });
+        }
+
+        const seenRollNumbers = new Set();
+        const cleanStudents = [];
+
+        for (let i = 0; i < students.length; i++) {
+            const rollNumber = String(
+                students[i]?.rollNumber || ""
+            ).trim().toUpperCase();
+
+            const password = students[i]?.password;
+
+            if (
+                !rollNumber ||
+                typeof password !== "string" ||
+                password.length < 4
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid student details in row " + (i + 1) +
+                        ". Password must contain at least 4 characters."
+                });
+            }
+
+            if (seenRollNumbers.has(rollNumber)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Duplicate roll number: " + rollNumber
+                });
+            }
+
+            seenRollNumbers.add(rollNumber);
+
+            cleanStudents.push({
+                rollNumber: rollNumber,
+                password: password
+            });
+        }
+
+        let added = 0;
+        let skipped = 0;
+
+        for (const student of cleanStudents) {
+            const existing = await Student.findOne({
+                rollNumber: student.rollNumber
+            });
+
+            if (existing) {
+                skipped++;
+                continue;
+            }
+
+            const hashedPassword = await bcrypt.hash(
+                student.password,
+                10
+            );
+
+            await Student.create({
+                rollNumber: student.rollNumber,
+                password: hashedPassword
+            });
+
+            added++;
+        }
+
+        res.json({
+            success: true,
+            added: added,
+            skipped: skipped,
+            message: added + " students added. " +
+                skipped + " existing roll numbers skipped."
+        });
+
+    } catch (error) {
+        console.error("Student import error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Student import failed."
+        });
+    }
+});
+
+
+/* =========================================
+   12. ADMIN: GET STUDENTS
+========================================= */
+
+app.get("/api/admin/students", checkAdmin, async function (req, res) {
+    try {
+        const students = await Student.find()
+            .select("rollNumber isActive createdAt")
+            .sort({ rollNumber: 1 })
+            .lean();
+
+        res.json({
+            success: true,
+            students: students
+        });
+
+    } catch (error) {
+        console.error("Fetch students error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Unable to fetch students."
+        });
+    }
+});
+
+
+/* =========================================
+   13. ADMIN: DELETE STUDENT
+========================================= */
+
+app.delete("/api/admin/students/:id", checkAdmin, async function (req, res) {
+    try {
+        if (!mongoose.isValidObjectId(req.params.id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid student ID."
+            });
+        }
+
+        const student = await Student.findByIdAndDelete(
+            req.params.id
+        );
+
+        if (!student) {
+            return res.status(404).json({
+                success: false,
+                message: "Student not found."
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Student deleted successfully."
+        });
+
+    } catch (error) {
+        console.error("Delete student error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Unable to delete student."
+        });
+    }
+});
+
+
+/* =========================================
+   14. ADMIN: UPLOAD QUESTIONS
 ========================================= */
 
 app.post("/api/admin/questions", checkAdmin, async function (req, res) {
@@ -192,7 +575,6 @@ app.post("/api/admin/questions", checkAdmin, async function (req, res) {
 
         const cleanQuestions = [];
 
-        // Validate all questions before changing the database.
         for (let i = 0; i < questions.length; i++) {
             const q = questions[i];
 
@@ -221,7 +603,7 @@ app.post("/api/admin/questions", checkAdmin, async function (req, res) {
                 ) {
                     return res.status(400).json({
                         success: false,
-                        message: "An option in question " + (i + 1) + " is invalid."
+                        message: "Invalid option in question " + (i + 1) + "."
                     });
                 }
 
@@ -259,46 +641,50 @@ app.post("/api/admin/questions", checkAdmin, async function (req, res) {
                 });
             }
 
+            const imageUrl = typeof q.imageUrl === "string"
+                ? q.imageUrl.trim()
+                : "";
+
             cleanQuestions.push({
                 question: q.question.trim(),
                 options: options,
-                answer: answer
+                answer: answer,
+                imageUrl: imageUrl
             });
         }
 
-        // Replace the old question set only after validation succeeds.
         await Question.deleteMany({});
         await Question.insertMany(cleanQuestions);
 
-        return res.json({
+        res.json({
             success: true,
-            message: cleanQuestions.length +
-                " questions uploaded server.",
+            message: cleanQuestions.length + " questions uploaded successfully.",
             total: cleanQuestions.length
         });
 
     } catch (error) {
         console.error("Question upload error:", error);
 
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
-            message: "Could not upload questions. Check MongoDB and server logs."
+            message: "Could not upload questions."
         });
     }
 });
 
 
 /* =========================================
-   7. GET QUESTIONS FOR QUIZ
+   15. STUDENT: GET QUESTIONS
+   Correct answers are NOT sent to students.
 ========================================= */
 
 app.get("/api/quiz/questions", async function (req, res) {
     try {
         const questions = await Question.find()
-            .select("question options answer -_id")
+            .select("question options imageUrl")
             .lean();
 
-        return res.json({
+        res.json({
             success: true,
             questions: questions
         });
@@ -306,7 +692,7 @@ app.get("/api/quiz/questions", async function (req, res) {
     } catch (error) {
         console.error("Question loading error:", error);
 
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
             message: "Could not load questions."
         });
@@ -315,25 +701,213 @@ app.get("/api/quiz/questions", async function (req, res) {
 
 
 
-app.delete("/api/admin/questions", checkAdmin, async (req, res) => {
+/* =========================================
+   STUDENT: GET ANSWER REVIEW
+========================================= */
+
+app.get(
+    "/api/quiz/results/:id/review",
+    checkStudent,
+    async function (req, res) {
+        try {
+
+            if (!mongoose.isValidObjectId(req.params.id)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid result ID."
+                });
+            }
+
+            const setting = await Setting.findOne();
+
+            if (!setting || !setting.reviewEnabled) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Answer review is disabled."
+                });
+            }
+
+            const result = await Result.findOne({
+                _id: req.params.id,
+                rollNumber: req.student.rollNumber
+            }).lean();
+
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Result not found."
+                });
+            }
+
+            return res.json({
+                success: true,
+                feedback: result.feedback
+            });
+
+        } catch (error) {
+
+            console.error("Answer review error:", error);
+
+            return res.status(500).json({
+                success: false,
+                message: "Unable to load answer review."
+            });
+
+        }
+    }
+);
+
+
+/* =========================================
+   16. ADMIN: DELETE ALL QUESTIONS
+========================================= */
+
+app.delete("/api/admin/questions", checkAdmin, async function (req, res) {
     try {
         const result = await Question.deleteMany({});
 
         res.json({
-            message: "All uploaded questions deleted successfully.",
+            success: true,
+            message: "All questions deleted successfully.",
             deletedCount: result.deletedCount
         });
+
     } catch (error) {
         console.error("Delete questions error:", error);
 
         res.status(500).json({
+            success: false,
             message: "Failed to delete questions."
         });
     }
 });
 
 
-app.get("/api/admin/results", checkAdmin, async (req, res) => {
+/* =========================================
+   17. STUDENT: SUBMIT QUIZ
+   Server calculates the score.
+========================================= */
+
+app.post("/api/quiz/results", checkStudent, async function (req, res) {
+    try {
+        const answers = req.body?.answers;
+
+        if (!Array.isArray(answers)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid quiz answers."
+            });
+        }
+
+        const questions = await Question.find().lean();
+
+        if (questions.length === 0 || answers.length !== questions.length) {
+            return res.status(400).json({
+                success: false,
+                message: "The submitted quiz does not match the current questions."
+            });
+        }
+
+        const answerMap = new Map();
+
+        for (const item of answers) {
+            if (
+                !item ||
+                typeof item.questionId !== "string" ||
+                !mongoose.isValidObjectId(item.questionId) ||
+                typeof item.answer !== "string"
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid answer data."
+                });
+            }
+
+            if (answerMap.has(item.questionId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Duplicate answer submitted."
+                });
+            }
+
+            answerMap.set(
+                item.questionId,
+                item.answer.trim().toUpperCase()
+            );
+        }
+
+        let score = 0;
+        const feedback = [];
+
+        for (const question of questions) {
+            const questionId = question._id.toString();
+
+            if (!answerMap.has(questionId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Please answer every question before submitting."
+                });
+            }
+
+            const selectedAnswer = answerMap.get(questionId);
+            const isCorrect = selectedAnswer === question.answer;
+
+            if (isCorrect) {
+                score++;
+            }
+
+            feedback.push({
+                question: question.question,
+                options: question.options,
+                selectedAnswer: selectedAnswer,
+                correctAnswer: question.answer,
+                isCorrect: isCorrect,
+                imageUrl: question.imageUrl || ""
+            });
+        }
+
+        const total = questions.length;
+        const percentage = Number(
+            ((score / total) * 100).toFixed(2)
+        );
+
+        const rollNumber = req.student.rollNumber;
+
+        const result = await Result.create({
+            rollNumber: rollNumber,
+            studentName: rollNumber,
+            score: score,
+            total: total,
+            percentage: percentage,
+            feedback: feedback
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Quiz result saved successfully.",
+            resultId: result._id,
+            rollNumber: rollNumber,
+            score: score,
+            total: total,
+            percentage: percentage
+        });
+
+    } catch (error) {
+        console.error("Submit result error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to submit quiz result."
+        });
+    }
+});
+
+
+/* =========================================
+   18. ADMIN: GET STUDENT RESULTS
+========================================= */
+
+app.get("/api/admin/results", checkAdmin, async function (req, res) {
     try {
         const results = await Result.find()
             .sort({ createdAt: -1 })
@@ -350,13 +924,17 @@ app.get("/api/admin/results", checkAdmin, async (req, res) => {
     }
 });
 
-// Delete all student results
-app.delete("/api/admin/results", checkAdmin, async (req, res) => {
 
+/* =========================================
+   19. ADMIN: DELETE ALL RESULTS
+========================================= */
+
+app.delete("/api/admin/results", checkAdmin, async function (req, res) {
     try {
         const result = await Result.deleteMany({});
 
         res.json({
+            success: true,
             message: "All student results deleted successfully.",
             deletedCount: result.deletedCount
         });
@@ -370,75 +948,12 @@ app.delete("/api/admin/results", checkAdmin, async (req, res) => {
     }
 });
 
-/* =========================================
-   8. SAVE QUIZ RESULT
-========================================= */
-
-app.post("/api/quiz/results", async (req, res) => {
-    try {
-        const studentName =
-            String(req.body.studentName || "").trim();
-
-        const score = Number(req.body.score);
-        const total = Number(req.body.total);
-        const percentage = Number(req.body.percentage);
-
-        if (
-            !studentName ||
-            !Number.isFinite(score) ||
-            !Number.isFinite(total) ||
-            !Number.isFinite(percentage) ||
-            total <= 0 ||
-            score < 0 ||
-            score > total
-        ) {
-            return res.status(400).json({
-                message: "Invalid student result."
-            });
-        }
-
-        const result = new Result({
-            studentName: studentName,
-            score: score,
-            total: total,
-            percentage: percentage,
-            feedback: Array.isArray(req.body.feedback) ? req.body.feedback : [],
-            createdAt: new Date()
-        });
-
-        await result.save();
-
-        res.status(201).json({
-            message: "Student result saved successfully."
-        });
-
-    } catch (error) {
-        console.error("Save result error:", error);
-
-        res.status(500).json({
-            message: "Failed to save result."
-        });
-    }
-});
-
 
 /* =========================================
-   9. TEST API AND FRONTEND ROUTES
+   20. ADMIN: GET REVIEW SETTING
 ========================================= */
 
-// Simple endpoint to check if the server is responding.
-app.get("/api/health", function (req, res) {
-    return res.json({
-        success: true,
-        message: "Quiz server is running."
-    });
-});
-/* =========================================
-   10. ADMIN STUDENT REVIEW SETTINGS
-========================================= */
-
-// ADMIN: Get review permission
-app.get("/api/admin/review-setting", checkAdmin, async (req, res) => {
+app.get("/api/admin/review-setting", checkAdmin, async function (req, res) {
     try {
         let setting = await Setting.findOne();
 
@@ -464,8 +979,11 @@ app.get("/api/admin/review-setting", checkAdmin, async (req, res) => {
 });
 
 
-// ADMIN: Enable or disable student review
-app.post("/api/admin/review-setting", checkAdmin, async (req, res) => {
+/* =========================================
+   21. ADMIN: UPDATE REVIEW SETTING
+========================================= */
+
+app.post("/api/admin/review-setting", checkAdmin, async function (req, res) {
     try {
         let setting = await Setting.findOne();
 
@@ -496,8 +1014,11 @@ app.post("/api/admin/review-setting", checkAdmin, async (req, res) => {
 });
 
 
-// STUDENT: Check review permission
-app.get("/api/quiz/review-setting", async (req, res) => {
+/* =========================================
+   22. STUDENT: CHECK REVIEW PERMISSION
+========================================= */
+
+app.get("/api/quiz/review-setting", async function (req, res) {
     try {
         const setting = await Setting.findOne();
 
@@ -518,20 +1039,34 @@ app.get("/api/quiz/review-setting", async (req, res) => {
     }
 });
 
+
 /* =========================================
-   10. HANDLE INVALID API ROUTES
+   23. HEALTH CHECK
 ========================================= */
 
-app.use("/api", function (req, res) {
-    return res.status(404).json({
-        success: false,
-        message: "API route not found: " + req.method + " " + req.originalUrl
+app.get("/api/health", function (req, res) {
+    res.json({
+        success: true,
+        message: "Quiz server is running."
     });
 });
 
 
 /* =========================================
-   11. ERROR HANDLER
+   24. INVALID API ROUTES
+========================================= */
+
+app.use("/api", function (req, res) {
+    res.status(404).json({
+        success: false,
+        message: "API route not found: " +
+            req.method + " " + req.originalUrl
+    });
+});
+
+
+/* =========================================
+   25. ERROR HANDLER
 ========================================= */
 
 app.use(function (error, req, res, next) {
@@ -541,7 +1076,7 @@ app.use(function (error, req, res, next) {
         return next(error);
     }
 
-    return res.status(500).json({
+    res.status(500).json({
         success: false,
         message: "An unexpected server error occurred."
     });
@@ -549,7 +1084,7 @@ app.use(function (error, req, res, next) {
 
 
 /* =========================================
-   12. CONNECT MONGODB AND START SERVER
+   26. CONNECT MONGODB AND START SERVER
 ========================================= */
 
 async function startServer() {
@@ -562,6 +1097,10 @@ async function startServer() {
             throw new Error("ADMIN_PASSWORD is missing from .env");
         }
 
+        if (!process.env.JWT_SECRET) {
+            throw new Error("JWT_SECRET is missing from .env");
+        }
+
         await mongoose.connect(process.env.MONGO_URI);
 
         console.log("MongoDB connected successfully.");
@@ -570,7 +1109,8 @@ async function startServer() {
 
         app.listen(PORT, function () {
             console.log("Server running at http://localhost:" + PORT);
-            console.log("Import page: http://localhost:" + PORT + "/import.html");
+            console.log("Quiz page: http://localhost:" + PORT);
+            console.log("Admin page: http://localhost:" + PORT + "/import.html");
         });
 
     } catch (error) {
