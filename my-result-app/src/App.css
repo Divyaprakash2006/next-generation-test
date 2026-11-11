@@ -1,0 +1,409 @@
+/* =====================================
+   1. GLOBAL STYLES
+===================================== */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background: #f3f6fb;
+    color: #222;
+}
+
+button,
+input,
+textarea {
+    font-family: Arial, sans-serif;
+}
+
+button {
+    border: none;
+    cursor: pointer;
+    padding: 11px 18px;
+    border-radius: 6px;
+    background: #2563eb;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+input,
+textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #ccd3df;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    background: white;
+}
+
+input:focus,
+textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 180px;
+    line-height: 1.6;
+}
+
+p {
+    line-height: 1.5;
+}
+
+/* =====================================
+   2. HEADER
+===================================== */
+
+.admin-header {
+    width: 100%;
+    min-height: 70px;
+    padding: 12px 5%;
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.logo-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.logo {
+    width: 150px;
+    max-height: 50px;
+    object-fit: contain;
+}
+
+.student-link {
+    text-decoration: none;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.student-link:hover {
+    text-decoration: underline;
+}
+
+/* =====================================
+   3. MAIN CONTAINER
+===================================== */
+
+.admin-container {
+    width: 92%;
+    max-width: 1100px;
+    margin: 30px auto;
+}
+
+.admin-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.admin-title-row h2 {
+    margin: 0 0 8px;
+    color: #172554;
+}
+
+.admin-title-row p {
+    margin: 0;
+    color: #64748b;
+}
+
+.logout-button {
+    background: #dc2626;
+}
+
+.logout-button:hover {
+    background: #b91c1c;
+}
+
+/* =====================================
+   4. LOGIN CARD
+===================================== */
+
+.admin-login-card {
+    width: 100%;
+    max-width: 420px;
+    margin: 80px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
+}
+
+.admin-login-card h2 {
+    text-align: center;
+    color: #172554;
+    margin-top: 0;
+}
+
+.admin-login-card p {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 20px;
+}
+
+.admin-login-card button {
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* =====================================
+   5. IMPORT CARDS
+===================================== */
+
+.import-card {
+    background: white;
+    padding: 24px;
+    margin-bottom: 22px;
+    border-radius: 10px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.045);
+}
+
+.import-card h3 {
+    margin: 0 0 12px;
+    color: #1e3a8a;
+    font-size: 19px;
+}
+
+.import-card p {
+    color: #64748b;
+    font-size: 14px;
+}
+
+.import-card input[type="file"] {
+    padding: 10px;
+    background: #f8fafc;
+}
+
+.import-card button {
+    margin: 8px 8px 8px 0;
+}
+
+.helper-text {
+    color: #64748b;
+    font-size: 13px;
+}
+
+/* =====================================
+   6. SECTION HEADING
+===================================== */
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.section-heading h3 {
+    margin: 0;
+}
+
+/* =====================================
+   7. TABLE STYLES
+===================================== */
+
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 15px;
+}
+
+.admin-table {
+    width: 100%;
+    min-width: 650px;
+    border-collapse: collapse;
+    background: white;
+}
+
+.admin-table th,
+.admin-table td {
+    border: 1px solid #e2e8f0;
+    padding: 12px;
+    text-align: left;
+    font-size: 14px;
+}
+
+.admin-table th {
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-weight: 700;
+}
+
+.admin-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.admin-table td {
+    color: #334155;
+}
+
+.admin-table td button {
+    padding: 7px 12px;
+    font-size: 12px;
+}
+
+/* =====================================
+   8. BUTTON VARIANTS
+===================================== */
+
+.danger-button {
+    background: #dc2626;
+}
+
+.danger-button:hover {
+    background: #b91c1c;
+}
+
+.secondary-button {
+    background: #64748b;
+}
+
+.secondary-button:hover {
+    background: #475569;
+}
+
+/* =====================================
+   9. STATUS
+===================================== */
+
+.status-enabled {
+    color: #15803d;
+}
+
+.status-disabled {
+    color: #dc2626;
+}
+
+/* =====================================
+   10. MESSAGE
+===================================== */
+
+.message {
+    color: #15803d;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 12px;
+}
+
+.message.error {
+    color: #dc2626;
+}
+
+/* =====================================
+   11. CONFIRMATION MODAL
+===================================== */
+
+.confirm-box {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.confirm-content {
+    width: 100%;
+    max-width: 400px;
+    padding: 25px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.confirm-content h3 {
+    margin-top: 0;
+    color: #1e3a8a;
+}
+
+.confirm-content p {
+    color: #475569;
+}
+
+.confirm-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* =====================================
+   12. RESPONSIVE DESIGN
+===================================== */
+
+@media (max-width: 600px) {
+
+    .admin-container {
+        width: 94%;
+        margin: 18px auto;
+    }
+
+    .admin-header {
+        padding: 12px 4%;
+    }
+
+    .logo {
+        width: 120px;
+    }
+
+    .admin-title-row {
+        align-items: flex-start;
+    }
+
+    .admin-title-row h2 {
+        font-size: 20px;
+    }
+
+    .import-card {
+        padding: 17px;
+    }
+
+    .import-card h3 {
+        font-size: 17px;
+    }
+
+    .section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .confirm-buttons {
+        flex-wrap: wrap;
+    }
+
+    .admin-login-card {
+        margin: 45px auto;
+        padding: 22px;
+    }
+}

@@ -1534,9 +1534,13 @@ function saveQuizTitle() {
 ========================================= */
 
 
+
+/* =========================================
+   30. PARSE QUESTION TEXT - FIXED AIKEN PARSER
+========================================= */
+
 function parseQuestionText(text) {
 
-    // Convert text into individual non-empty lines.
     const lines = text
         .replace(/\r/g, "")
         .split("\n")
@@ -1547,22 +1551,39 @@ function parseQuestionText(text) {
 
     const blocks = [];
     let currentBlock = [];
+    let answerFound = false;
 
-    // Start a new question whenever a numbered question begins.
+    // Separate questions using ANSWER lines.
     lines.forEach(function (line) {
 
-        if (/^\d+\s*[.)]\s*/.test(line)) {
+        const isNumberedQuestion =
+            /^(?:QUESTION\s*)?\d+\s*[.):\-]\s*/i.test(line);
 
-            if (currentBlock.length > 0) {
-                blocks.push(currentBlock);
-            }
+        // If the previous question has an answer,
+        // the next line starts a new question.
+        if (answerFound) {
 
-            currentBlock = [line];
+            blocks.push(currentBlock);
 
-        } else {
+            currentBlock = [];
+            answerFound = false;
 
-            currentBlock.push(line);
+        }
 
+        // Also support numbered questions.
+        else if (isNumberedQuestion && currentBlock.length > 0) {
+
+            blocks.push(currentBlock);
+
+            currentBlock = [];
+
+        }
+
+        currentBlock.push(line);
+
+        // Detect the answer line.
+        if (/^(?:ANSWER|ANS)\s*[:\-]\s*[A-Z]$/i.test(line)) {
+            answerFound = true;
         }
 
     });
@@ -1583,16 +1604,19 @@ function parseQuestionText(text) {
 
         block.forEach(function (line) {
 
+            // Supports A. Option, A) Option, A- Option, A: Option
             const optionMatch = line.match(
                 /^([A-Z])[.)\-:]\s*(.+)$/i
             );
 
+            // Supports ANSWER: A and ANS: A
             const answerMatch = line.match(
                 /^(?:ANSWER|ANS)\s*[:\-]\s*([A-Z])$/i
             );
 
+            // Supports IMAGE: URL
             const imageMatch = line.match(
-                /^IMAGE\s*[:\-]\s*(.+)$/i
+                /^IMAGE\s*[:\-]\s*(https?:\/\/\S+)$/i
             );
 
             if (optionMatch) {
@@ -1612,31 +1636,49 @@ function parseQuestionText(text) {
 
             } else {
 
+                // Add question text.
                 question += (question ? " " : "") +
-                    line.replace(/^\d+\s*[.)]\s*/, "");
+                    line.replace(
+                        /^(?:QUESTION\s*)?\d+\s*[.):\-]\s*/i,
+                        ""
+                    );
 
             }
 
         });
 
-        const optionLetters = new Set(
-            options.map(function (option) {
-                return option.letter;
-            })
-        );
+        // Check duplicate option letters.
+        const optionLetters = options.map(function (option) {
+            return option.letter;
+        });
 
+        const uniqueLetters = new Set(optionLetters);
+
+        const hasDuplicateOptions =
+            uniqueLetters.size !== optionLetters.length;
+
+        // Check whether the correct answer exists.
+        const answerExists = uniqueLetters.has(answer);
+
+        // Validate question.
         if (
-            question &&
+            question.trim() !== "" &&
             options.length >= 2 &&
-            answer &&
-            optionLetters.has(answer)
+            !hasDuplicateOptions &&
+            answer !== "" &&
+            answerExists
         ) {
 
             validQuestions.push({
-                question: question,
+
+                question: question.trim(),
+
                 options: options,
+
                 answer: answer,
+
                 imageUrl: imageUrl
+
             });
 
         } else {
@@ -1648,8 +1690,11 @@ function parseQuestionText(text) {
     });
 
     return {
+
         questions: validQuestions,
+
         invalidBlocks: invalidBlocks
+
     };
 
 }

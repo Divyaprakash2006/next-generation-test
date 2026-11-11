@@ -1,4 +1,3 @@
-
 /* =========================================
    1. IMPORT PACKAGES AND CONFIGURATION
 ========================================= */
@@ -17,7 +16,14 @@ dotenv.config();
 const app = express();
 
 app.use(express.json({ limit: "10mb" }));
+
+// Serve the built React Admin application under /admin.
+const adminBuildPath = path.join(__dirname, "react-admin", "dist");
+app.use("/2026admin", express.static(adminBuildPath));
+
+// Keep the existing student quiz page and its static files.
 app.use(express.static(__dirname));
+
 
 app.get("/", function (req, res) {
     res.sendFile(path.join(__dirname, "quiz.html"));
@@ -162,7 +168,15 @@ const settingSchema = new mongoose.Schema({
 
 const Setting = mongoose.model("Setting", settingSchema);
 
+app.use("/api", function (req, res, next) {
 
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+
+    next();
+
+});
 /* =========================================
    6. ADMIN AUTHENTICATION
 ========================================= */
@@ -246,6 +260,7 @@ if (
     console.log("ERROR: Cloudinary credentials are missing.");
 }
 
+
 /* =========================================
    CLOUDINARY IMAGE UPLOAD FUNCTION
 ========================================= */
@@ -273,11 +288,10 @@ function uploadImageToCloudinary(buffer) {
 }
 
 
-
 const imageUpload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5 MB
+        fileSize: 5 * 1024 * 1024
     },
     fileFilter: function (req, file, cb) {
         const allowedTypes = [
@@ -294,6 +308,8 @@ const imageUpload = multer({
         }
     }
 });
+
+
 app.post(
     "/api/admin/upload-image",
     checkAdmin,
@@ -327,23 +343,27 @@ app.post(
                 });
 
             } catch (error) {
-    console.log("\n========== CLOUDINARY DEBUG ==========");
-    console.dir(error, { depth: 10 });
-    console.log("HTTP Status:", error.http_code);
-    console.log("Response:", error.response);
-    console.log("======================================");
 
-    res.status(500).json({
-        success: false,
-        message: error.message,
-        status: error.http_code || null
-    });
-}
+                console.log("\n========== CLOUDINARY DEBUG ==========");
+                console.dir(error, { depth: 10 });
+                console.log("HTTP Status:", error.http_code);
+                console.log("Response:", error.response);
+                console.log("======================================");
+
+                res.status(500).json({
+                    success: false,
+                    message: error.message,
+                    status: error.http_code || null
+                });
+
+            }
 
         });
 
     }
 );
+
+
 /* =========================================
    8. ADMIN LOGIN API
 ========================================= */
@@ -631,11 +651,11 @@ app.get("/api/admin/students", checkAdmin, async function (req, res) {
         });
 
     } catch (error) {
-        console.error("Fetch students error:", error);
+        console.error("Get students error:", error);
 
         res.status(500).json({
             success: false,
-            message: "Unable to fetch students."
+            message: "Unable to load students."
         });
     }
 });
@@ -823,9 +843,8 @@ app.get("/api/quiz/questions", async function (req, res) {
 });
 
 
-
 /* =========================================
-   STUDENT: GET ANSWER REVIEW
+   16. STUDENT: GET ANSWER REVIEW
 ========================================= */
 
 app.get(
@@ -882,7 +901,7 @@ app.get(
 
 
 /* =========================================
-   16. ADMIN: DELETE ALL QUESTIONS
+   17. ADMIN: DELETE ALL QUESTIONS
 ========================================= */
 
 app.delete("/api/admin/questions", checkAdmin, async function (req, res) {
@@ -907,8 +926,9 @@ app.delete("/api/admin/questions", checkAdmin, async function (req, res) {
 
 
 /* =========================================
-   17. STUDENT: SUBMIT QUIZ
+   18. STUDENT: SUBMIT QUIZ
    Server calculates the score.
+   Unanswered questions count as incorrect.
 ========================================= */
 
 app.post("/api/quiz/results", checkStudent, async function (req, res) {
@@ -924,10 +944,10 @@ app.post("/api/quiz/results", checkStudent, async function (req, res) {
 
         const questions = await Question.find().lean();
 
-        if (questions.length === 0 || answers.length !== questions.length) {
+        if (questions.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: "The submitted quiz does not match the current questions."
+                message: "No quiz questions are available."
             });
         }
 
@@ -959,21 +979,33 @@ app.post("/api/quiz/results", checkStudent, async function (req, res) {
             );
         }
 
+        const questionIds = new Set(
+            questions.map(function (question) {
+                return question._id.toString();
+            })
+        );
+
+        for (const questionId of answerMap.keys()) {
+            if (!questionIds.has(questionId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "An answer refers to an invalid question."
+                });
+            }
+        }
+
         let score = 0;
         const feedback = [];
 
         for (const question of questions) {
             const questionId = question._id.toString();
 
-            if (!answerMap.has(questionId)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Please answer every question before submitting."
-                });
-            }
+            // Missing answer is treated as unanswered.
+            const selectedAnswer = answerMap.get(questionId) || "";
 
-            const selectedAnswer = answerMap.get(questionId);
-            const isCorrect = selectedAnswer === question.answer;
+            const isCorrect =
+                selectedAnswer !== "" &&
+                selectedAnswer === question.answer;
 
             if (isCorrect) {
                 score++;
@@ -990,6 +1022,7 @@ app.post("/api/quiz/results", checkStudent, async function (req, res) {
         }
 
         const total = questions.length;
+
         const percentage = Number(
             ((score / total) * 100).toFixed(2)
         );
@@ -1027,7 +1060,7 @@ app.post("/api/quiz/results", checkStudent, async function (req, res) {
 
 
 /* =========================================
-   18. ADMIN: GET STUDENT RESULTS
+   19. ADMIN: GET STUDENT RESULTS
 ========================================= */
 
 app.get("/api/admin/results", checkAdmin, async function (req, res) {
@@ -1042,6 +1075,7 @@ app.get("/api/admin/results", checkAdmin, async function (req, res) {
         console.error("Fetch results error:", error);
 
         res.status(500).json({
+            success: false,
             message: "Failed to fetch results."
         });
     }
@@ -1049,7 +1083,7 @@ app.get("/api/admin/results", checkAdmin, async function (req, res) {
 
 
 /* =========================================
-   19. ADMIN: DELETE ALL RESULTS
+   20. ADMIN: DELETE ALL RESULTS
 ========================================= */
 
 app.delete("/api/admin/results", checkAdmin, async function (req, res) {
@@ -1066,6 +1100,7 @@ app.delete("/api/admin/results", checkAdmin, async function (req, res) {
         console.error("Delete results error:", error);
 
         res.status(500).json({
+            success: false,
             message: "Failed to delete student results."
         });
     }
@@ -1073,7 +1108,7 @@ app.delete("/api/admin/results", checkAdmin, async function (req, res) {
 
 
 /* =========================================
-   20. ADMIN: GET REVIEW SETTING
+   21. ADMIN: GET REVIEW SETTING
 ========================================= */
 
 app.get("/api/admin/review-setting", checkAdmin, async function (req, res) {
@@ -1103,7 +1138,7 @@ app.get("/api/admin/review-setting", checkAdmin, async function (req, res) {
 
 
 /* =========================================
-   21. ADMIN: UPDATE REVIEW SETTING
+   22. ADMIN: UPDATE REVIEW SETTING
 ========================================= */
 
 app.post("/api/admin/review-setting", checkAdmin, async function (req, res) {
@@ -1138,7 +1173,7 @@ app.post("/api/admin/review-setting", checkAdmin, async function (req, res) {
 
 
 /* =========================================
-   22. STUDENT: CHECK REVIEW PERMISSION
+   23. STUDENT: CHECK REVIEW PERMISSION
 ========================================= */
 
 app.get("/api/quiz/review-setting", async function (req, res) {
@@ -1164,7 +1199,7 @@ app.get("/api/quiz/review-setting", async function (req, res) {
 
 
 /* =========================================
-   23. HEALTH CHECK
+   24. HEALTH CHECK
 ========================================= */
 
 app.get("/api/health", function (req, res) {
@@ -1176,7 +1211,7 @@ app.get("/api/health", function (req, res) {
 
 
 /* =========================================
-   24. INVALID API ROUTES
+   25. INVALID API ROUTES
 ========================================= */
 
 app.use("/api", function (req, res) {
@@ -1189,7 +1224,7 @@ app.use("/api", function (req, res) {
 
 
 /* =========================================
-   25. ERROR HANDLER
+   26. ERROR HANDLER
 ========================================= */
 
 app.use(function (error, req, res, next) {
@@ -1207,7 +1242,7 @@ app.use(function (error, req, res, next) {
 
 
 /* =========================================
-   26. CONNECT MONGODB AND START SERVER
+   27. CONNECT MONGODB AND START SERVER
 ========================================= */
 
 async function startServer() {
@@ -1233,7 +1268,8 @@ async function startServer() {
         app.listen(PORT, function () {
             console.log("Server running at http://localhost:" + PORT);
             console.log("Quiz page: http://localhost:" + PORT);
-            console.log("Admin page: http://localhost:" + PORT + "/import.html");
+            console.log("React Admin page: http://localhost:" + 5173 + "/admin");
+            console.log("Old Admin page: http://localhost:" + PORT + "/import.html");
         });
 
     } catch (error) {
