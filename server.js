@@ -1,3 +1,4 @@
+
 /* =========================================
    1. IMPORT PACKAGES AND CONFIGURATION
 ========================================= */
@@ -17,16 +18,41 @@ const app = express();
 
 app.use(express.json({ limit: "10mb" }));
 
-// Serve the built React Admin application under /admin.
-const adminBuildPath = path.join(__dirname, "react-admin", "dist");
-app.use("/2026admin", express.static(adminBuildPath));
+// React Admin build folder
+const adminBuildPath = path.join(
+    __dirname,
+    "my-result-app",
+    "dist"
+);
 
-// Keep the existing student quiz page and its static files.
+// Serve React Admin assets
+app.use(
+    "/2026admin",
+    express.static(adminBuildPath)
+);
+
+// React Admin URL and SPA fallback
+app.get(/^\/2026admin(?:\/.*)?$/, function (req, res, next) {
+
+    res.sendFile(
+        path.join(adminBuildPath, "index.html"),
+        function (error) {
+            if (error) {
+                console.error("React Admin loading error:", error.message);
+                next(error);
+            }
+        }
+    );
+
+});
+
+// Existing student quiz page
 app.use(express.static(__dirname));
 
-
 app.get("/", function (req, res) {
-    res.sendFile(path.join(__dirname, "quiz.html"));
+    res.sendFile(
+        path.join(__dirname, "quiz.html")
+    );
 });
 
 
