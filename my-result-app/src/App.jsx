@@ -1,19 +1,497 @@
+
+import { useState } from "react";
 import "./App.css";
 import { useAdminDashboard } from "./super_Server.js";
 
 function Message({ messages, name }) {
     const item = messages[name];
+
     if (!item) return null;
 
     return (
-        <p className={`message ${item.isError ? "error" : ""}`} role="status">
+        <p className={`message ${item.isError ? "error" : ""}`}>
             {item.text}
         </p>
     );
 }
 
+import {
+    LayoutDashboard,
+    Settings,
+    FileUp,
+    ClipboardList,
+    Users,
+    ShieldCheck,
+    ChartColumn,
+    LogOut,
+    GraduationCap
+} from "lucide-react";
+
 function App() {
     const admin = useAdminDashboard();
+    const [activePage, setActivePage] = useState("dashboard");
+
+    const menuItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "import", label: "Import Questions", icon: FileUp },
+    { id: "questions", label: "Question Management", icon: ClipboardList },
+    { id: "students", label: "Students", icon: Users },
+    { id: "review", label: "Review Permission", icon: ShieldCheck },
+    { id: "results", label: "Student Results", icon: ChartColumn }
+];
+
+    function renderPage() {
+
+        switch (activePage) {
+
+            case "dashboard":
+                return (
+                    <>
+                        <h2>Dashboard</h2>
+                        <p>Welcome Admin. Manage your quiz system.</p>
+
+                        <div className="dashboard-cards">
+                            <div className="dashboard-card">
+                                <h3>{admin.students.length}</h3>
+                                <p>Total Students</p>
+                            </div>
+
+                            <div className="dashboard-card">
+                                <h3>{admin.questionCount}</h3>
+                                <p>Total Questions</p>
+                            </div>
+
+                            <div className="dashboard-card">
+                                <h3>{admin.results.length}</h3>
+                                <p>Total Results</p>
+                            </div>
+
+                            <div className="dashboard-card">
+                                <h3>{admin.reviewEnabled ? "Enabled" : "Disabled"}</h3>
+                                <p>Answer Review</p>
+                            </div>
+                        </div>
+
+                        <div className="import-card">
+                            <h3>Quick Actions</h3>
+
+                            <div className="quick-actions">
+                                <button onClick={() => setActivePage("import")}>
+                                    Import Questions
+                                </button>
+
+                                <button onClick={() => setActivePage("students")}>
+                                    Manage Students
+                                </button>
+
+                                <button onClick={() => setActivePage("results")}>
+                                    View Results
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                );
+
+            case "settings":
+                return (
+                    <section className="import-card">
+                        <h2>Test Title Settings</h2>
+
+                        <input
+                            type="text"
+                            value={admin.quizTitle}
+                            onChange={event =>
+                                admin.setQuizTitle(event.target.value)
+                            }
+                            placeholder="Enter quiz title"
+                        />
+
+                        <button onClick={admin.saveQuizTitle}>
+                            Save Quiz Title
+                        </button>
+
+                        <Message messages={admin.messages} name="title" />
+                    </section>
+                );
+
+            case "import":
+                return (
+                    <>
+
+                    <section className="import-card">
+                        <h2>Test Title Settings</h2>
+
+                        <input
+                            type="text"
+                            value={admin.quizTitle}
+                            onChange={event =>
+                                admin.setQuizTitle(event.target.value)
+                            }
+                            placeholder="Enter quiz title"
+                        />
+
+                        <button onClick={admin.saveQuizTitle}>
+                            Save Quiz Title
+                        </button>
+
+                        <Message messages={admin.messages} name="title" />
+                    </section>
+
+                        <h2>Import Questions</h2>
+
+                        <section className="import-card">
+                            <h3>Import Questions from TXT File</h3>
+                            <p>Select a text file containing quiz questions.</p>
+
+                            <input
+                                type="file"
+                                accept=".txt,text/plain"
+                                onChange={event =>
+                                    admin.setQuestionFile(
+                                        event.target.files?.[0] || null
+                                    )
+                                }
+                            />
+
+                            {admin.questionFile && (
+                                <p>
+                                    Selected file: {admin.questionFile.name}
+                                </p>
+                            )}
+
+                            <button
+                                onClick={admin.handleTXTImport}
+                                disabled={admin.loading.txt}
+                            >
+                                {admin.loading.txt
+                                    ? "Importing..."
+                                    : "Import Questions"}
+                            </button>
+
+                            <Message messages={admin.messages} name="txt" />
+                        </section>
+
+                        <section className="import-card">
+                            <h3>Manually Add Questions</h3>
+                            <p>Paste questions using the supported format.</p>
+
+                            <textarea
+                                rows="12"
+                                value={admin.typedQuestions}
+                                onChange={event =>
+                                    admin.setTypedQuestions(event.target.value)
+                                }
+                                onPaste={admin.handleQuestionPaste}
+                                placeholder={
+                                    "1. What is HTML?\n\n" +
+                                    "A. Programming language\n" +
+                                    "B. Markup language\n" +
+                                    "C. Database\n" +
+                                    "D. Operating system\n\n" +
+                                    "ANSWER: B"
+                                }
+                            />
+
+                            <p className="helper-text">
+                                Tip: Paste an image directly into this text area.
+                            </p>
+
+                            {admin.imagePasteMessage && (
+                                <p className="message">
+                                    {admin.imagePasteMessage}
+                                </p>
+                            )}
+
+                            <button
+                                onClick={admin.handleTypedImport}
+                                disabled={admin.loading.typed}
+                            >
+                                {admin.loading.typed
+                                    ? "Importing..."
+                                    : "Import Typed Questions"}
+                            </button>
+
+                            <Message messages={admin.messages} name="typed" />
+                        </section>
+                    </>
+                );
+
+            case "questions":
+                return (
+                    <section className="import-card">
+                        <h2>Question Management</h2>
+
+                        <p>
+                            Total Questions:{" "}
+                            <strong>{admin.questionCount}</strong>
+                        </p>
+
+                        <button
+                            className="danger-button"
+                            onClick={admin.handleDeleteAllQuestions}
+                            disabled={admin.loading.deleteQuestions}
+                        >
+                            {admin.loading.deleteQuestions
+                                ? "Deleting..."
+                                : "Delete All Questions"}
+                        </button>
+
+                        <Message messages={admin.messages} name="questions" />
+                    </section>
+                );
+
+            case "students":
+                return (
+                    <>
+                        <h2>Student Management</h2>
+
+                        <section className="import-card">
+                            <h3>Add Student Manually</h3>
+
+                            <form onSubmit={admin.handleAddStudent}>
+                                <input
+                                    type="text"
+                                    name="rollNumber"
+                                    placeholder="Enter student roll number"
+                                />
+
+                                <input
+                                    type="password"
+                                    name="studentPassword"
+                                    placeholder="Enter student password"
+                                />
+
+                                <button
+                                    type="submit"
+                                    disabled={admin.loading.addStudent}
+                                >
+                                    {admin.loading.addStudent
+                                        ? "Adding..."
+                                        : "Add Student"}
+                                </button>
+                            </form>
+
+                            <Message
+                                messages={admin.messages}
+                                name="addStudent"
+                            />
+                        </section>
+
+                        <section className="import-card">
+                            <h3>Import Students from CSV</h3>
+
+                            <p>
+                                Required columns: Roll Number and Password.
+                            </p>
+
+                            <button
+                                type="button"
+                                onClick={admin.downloadStudentCSVTemplate}
+                            >
+                                Download CSV Template
+                            </button>
+
+                            <input
+                                type="file"
+                                accept=".csv,text/csv"
+                                onChange={event =>
+                                    admin.setStudentCSVFile(
+                                        event.target.files?.[0] || null
+                                    )
+                                }
+                            />
+
+                            {admin.studentCSVFile && (
+                                <p>
+                                    Selected file: {admin.studentCSVFile.name}
+                                </p>
+                            )}
+
+                            <button
+                                onClick={admin.handleCSVImport}
+                                disabled={admin.loading.csv}
+                            >
+                                {admin.loading.csv
+                                    ? "Importing..."
+                                    : "Import Students"}
+                            </button>
+
+                            <Message messages={admin.messages} name="csv" />
+                        </section>
+
+                        <section className="import-card">
+                            <div className="section-heading">
+                                <h3>Registered Students</h3>
+
+                                <button
+                                    onClick={admin.refreshStudents}
+                                    disabled={admin.loading.students}
+                                >
+                                    Refresh Students
+                                </button>
+                            </div>
+
+                            <p>Total Students: {admin.students.length}</p>
+
+                            <div className="table-container">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>S.No</th>
+                                            <th>Roll Number</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {admin.students.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="4">
+                                                    No students registered.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            admin.students.map((student, index) => (
+                                                <tr key={student._id}>
+                                                    <td>{index + 1}</td>
+                                                    <td>{student.rollNumber}</td>
+                                                    <td>
+                                                        {student.isActive
+                                                            ? "Active"
+                                                            : "Inactive"}
+                                                    </td>
+                                                    <td>
+                                                        <button
+                                                            className="danger-button"
+                                                            onClick={() =>
+                                                                admin.handleDeleteStudent(student)
+                                                            }
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <Message messages={admin.messages} name="students" />
+                        </section>
+                    </>
+                );
+
+            case "review":
+                return (
+                    <section className="import-card">
+                        <h2>Student Answer Review Permission</h2>
+
+                        <p>
+                            Allow students to view correct answers after
+                            completing the Test.
+                        </p>
+
+                        <p>
+                            Current Status:{" "}
+                            <strong>
+                                {admin.reviewEnabled ? "Enabled" : "Disabled"}
+                            </strong>
+                        </p>
+
+                        <button
+                            onClick={admin.handleToggleReview}
+                            disabled={admin.loading.review}
+                        >
+                            {admin.loading.review
+                                ? "Updating..."
+                                : admin.reviewEnabled
+                                    ? "Disable Student Review"
+                                    : "Enable Student Review"}
+                        </button>
+
+                        <Message messages={admin.messages} name="review" />
+                    </section>
+                );
+
+            case "results":
+                return (
+                    <section className="import-card">
+                        <div className="section-heading">
+                            <h2>Student Quiz Results</h2>
+
+                            <button
+                                onClick={admin.refreshResults}
+                                disabled={admin.loading.results}
+                            >
+                                Refresh Results
+                            </button>
+                        </div>
+
+                        <button
+                            className="danger-button"
+                            onClick={admin.handleDeleteAllResults}
+                            disabled={admin.loading.deleteResults}
+                        >
+                            {admin.loading.deleteResults
+                                ? "Deleting..."
+                                : "Delete All Results"}
+                        </button>
+
+                        <div className="table-container">
+                            <table className="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Roll Number</th>
+                                        <th>Score</th>
+                                        <th>Total</th>
+                                        <th>Percentage</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {admin.results.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6">
+                                                No student results available.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        admin.results.map((result, index) => (
+                                            <tr key={result._id || index}>
+                                                <td>{index + 1}</td>
+                                                <td>
+                                                    {result.rollNumber ||
+                                                        result.studentName}
+                                                </td>
+                                                <td>{result.score}</td>
+                                                <td>{result.total}</td>
+                                                <td>{result.percentage}%</td>
+                                                <td>
+                                                    {result.createdAt
+                                                        ? new Date(
+                                                            result.createdAt
+                                                        ).toLocaleString()
+                                                        : "-"}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <Message messages={admin.messages} name="results" />
+                    </section>
+                );
+
+            default:
+                return <h2>Page not found</h2>;
+        }
+    }
 
     if (!admin.loggedIn) {
         return (
@@ -22,18 +500,25 @@ function App() {
                     <a href="/" className="logo-link">
                         <img src="logo.svg" alt="Quiz Logo" className="logo" />
                     </a>
-                    <a href="/" className="student-link">Student Portal</a>
+                    <a href="/" className="student-link">
+                        Student Portal
+                    </a>
                 </header>
 
                 <main className="admin-container">
-                    <form className="admin-login-card" onSubmit={admin.handleAdminLogin}>
+                    <form
+                        className="admin-login-card"
+                        onSubmit={admin.handleAdminLogin}
+                    >
                         <h2>Admin Login</h2>
                         <p>Enter your admin password to continue.</p>
 
                         <input
                             type="password"
                             value={admin.loginPassword}
-                            onChange={event => admin.setLoginPassword(event.target.value)}
+                            onChange={event =>
+                                admin.setLoginPassword(event.target.value)
+                            }
                             placeholder="Enter admin password"
                             autoComplete="current-password"
                         />
@@ -50,385 +535,79 @@ function App() {
     }
 
     return (
-        <div className="admin-page">
-            <header className="admin-header">
-                <a href="/" className="logo-link">
-                    <img src="logo.svg" alt="Quiz Logo" className="logo" />
-                </a>
-                <a href="/" className="student-link">Student Portal</a>
-            </header>
+        <div className="admin-layout">
 
-            <main className="admin-container">
-                <div className="admin-title-row">
-                    <div>
-                        <h2>Welcome Admin</h2>
-                        <p>Manage your quiz and students.</p>
-                    </div>
+            {/* FIXED SIDEBAR */}
+            <aside className="admin-sidebar">
 
-                    <button className="logout-button" onClick={admin.handleLogout}>
+                <div className="sidebar-logo">
+                    <img src="logo.svg" alt="Quiz Logo" />
+
+                </div>
+
+                <p className="sidebar-label">MAIN MENU</p>
+
+               <nav className="sidebar-nav">
+                   {menuItems.map(item => {
+                          const Icon = item.icon;
+
+                    return (
+                        <button
+                              key={item.id}
+                                className={
+                                    activePage === item.id
+                                             ? "sidebar-link active"
+                                       : "sidebar-link"
+                                   }
+                                 onClick={() => setActivePage(item.id)}
+                            >
+                                    <Icon size={20} strokeWidth={1.8} />
+                                  <span>{item.label}</span>
+                                   </button>
+                                   );
+                              })}
+                                   </nav>
+
+                <div className="sidebar-bottom">
+                    
+                    <button
+                        className="sidebar-link logout-link"
+                        onClick={admin.handleLogout}
+                    >
+                        <span></span>
                         Logout
                     </button>
                 </div>
+            </aside>
 
-                <Message messages={admin.messages} name="dashboard" />
+            {/* MAIN CONTENT */}
+            <main className="admin-main">
 
-                {/* QUIZ TITLE SETTINGS */}
-                <section className="import-card">
-                    <h3>Quiz Title Settings</h3>
-
-                    <input
-                        type="text"
-                        value={admin.quizTitle}
-                        onChange={event => admin.setQuizTitle(event.target.value)}
-                        placeholder="Enter quiz title"
-                    />
-
-                    <button onClick={admin.saveQuizTitle}>
-                        Save Quiz Title
-                    </button>
-
-                    <Message messages={admin.messages} name="title" />
-                </section>
-
-                {/* IMPORT QUESTIONS FROM TXT */}
-                <section className="import-card">
-                    <h3>Import Questions from TXT File</h3>
-                    <p>Select a text file containing your quiz questions.</p>
-
-                    <input
-                        type="file"
-                        accept=".txt,text/plain"
-                        onChange={event =>
-                            admin.setQuestionFile(event.target.files?.[0] || null)
-                        }
-                    />
-
-                    {admin.questionFile && (
-                        <p>Selected file: {admin.questionFile.name}</p>
-                    )}
-
-                    <button
-                        onClick={admin.handleTXTImport}
-                        disabled={admin.loading.txt}
-                    >
-                        {admin.loading.txt ? "Importing..." : "Import Questions"}
-                    </button>
-
-                    <Message messages={admin.messages} name="txt" />
-                </section>
-
-                {/* MANUAL QUESTION IMPORT */}
-                <section className="import-card">
-                    <h3>Manually Add Questions</h3>
-                    <p>Paste your questions using the supported format.</p>
-
-                    <textarea
-                        rows="12"
-                        value={admin.typedQuestions}
-                        onChange={event =>
-                            admin.setTypedQuestions(event.target.value)
-                        }
-                        onPaste={admin.handleQuestionPaste}
-                        placeholder={
-                            "1. What is HTML?\n\n" +
-                            "A. Programming language\n" +
-                            "B. Markup language\n" +
-                            "C. Database\n" +
-                            "D. Operating system\n\n" +
-                            "ANSWER: B"
-                        }
-                    />
-
-                    <p className="helper-text">
-                        Tip: Paste an image directly into this text area.
-                        It will be uploaded and an IMAGE URL will be inserted.
-                    </p>
-
-                    {admin.imagePasteMessage && (
-                        <p className="message">
-                            {admin.imagePasteMessage}
-                        </p>
-                    )}
-
-                    <button
-                        onClick={admin.handleTypedImport}
-                        disabled={admin.loading.typed}
-                    >
-                        {admin.loading.typed
-                            ? "Importing..."
-                            : "Import Typed Questions"}
-                    </button>
-
-                    <Message messages={admin.messages} name="typed" />
-                </section>
-
-                {/* QUESTION MANAGEMENT */}
-                <section className="import-card">
-                    <h3>Question Management</h3>
-
-                    <p>
-                        Total Questions: <strong>{admin.questionCount}</strong>
-                    </p>
-
-                    <button
-                        className="danger-button"
-                        onClick={admin.handleDeleteAllQuestions}
-                        disabled={admin.loading.deleteQuestions}
-                    >
-                        {admin.loading.deleteQuestions
-                            ? "Deleting..."
-                            : "Delete All Questions"}
-                    </button>
-
-                    <Message messages={admin.messages} name="questions" />
-                </section>
-
-                {/* ADD STUDENT */}
-                <section className="import-card">
-                    <h3>Add Student Manually</h3>
-                    <p>Register one student using their roll number and password.</p>
-
-                    <form onSubmit={admin.handleAddStudent}>
-                        <input
-                            type="text"
-                            name="rollNumber"
-                            placeholder="Enter student roll number"
-                        />
-
-                        <input
-                            type="password"
-                            name="studentPassword"
-                            placeholder="Enter student password"
-                        />
-
-                        <button
-                            type="submit"
-                            disabled={admin.loading.addStudent}
-                        >
-                            {admin.loading.addStudent
-                                ? "Adding..."
-                                : "Add Student"}
-                        </button>
-                    </form>
-
-                    <Message messages={admin.messages} name="addStudent" />
-                </section>
-
-                {/* IMPORT STUDENTS FROM CSV */}
-                <section className="import-card">
-                    <h3>Import Students from CSV</h3>
-
-                    <p>
-                        Upload a CSV file containing student roll numbers and passwords.
-                    </p>
-
-                    <p>
-                        Required CSV columns: <strong>Roll Number</strong> and{" "}
-                        <strong>Password</strong>.
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={admin.downloadStudentCSVTemplate}
-                    >
-                        Download CSV Template
-                    </button>
-
-                    <input
-                        type="file"
-                        accept=".csv,text/csv"
-                        onChange={event =>
-                            admin.setStudentCSVFile(event.target.files?.[0] || null)
-                        }
-                    />
-
-                    {admin.studentCSVFile && (
-                        <p>Selected file: {admin.studentCSVFile.name}</p>
-                    )}
-
-                    <button
-                        onClick={admin.handleCSVImport}
-                        disabled={admin.loading.csv}
-                    >
-                        {admin.loading.csv
-                            ? "Importing..."
-                            : "Import Students"}
-                    </button>
-
-                    <Message messages={admin.messages} name="csv" />
-                </section>
-
-                {/* REGISTERED STUDENTS */}
-                <section className="import-card">
-                    <div className="section-heading">
-                        <h3>Registered Students</h3>
-
-                        <button
-                            onClick={admin.refreshStudents}
-                            disabled={admin.loading.students}
-                        >
-                            {admin.loading.students
-                                ? "Loading..."
-                                : "Refresh Students"}
-                        </button>
+                <header className="admin-topbar">
+                    <div>
+                        <h3>
+                            {menuItems.find(
+                                item => item.id === activePage
+                            )?.label}
+                        </h3>
+                        <p>Quiz Management System</p>
                     </div>
 
-                    <p>Total Students: {admin.students.length}</p>
+                    <span className="admin-profile">
+                        👤 Admin
+                    </span>
+                </header>
 
-                    <div className="table-container">
-                        <table className="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>S.No</th>
-                                    <th>Roll Number</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
+                <div className="admin-content">
 
-                            <tbody>
-                                {admin.students.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="4">
-                                            No students registered.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    admin.students.map((student, index) => (
-                                        <tr key={student._id}>
-                                            <td>{index + 1}</td>
-                                            <td>{student.rollNumber}</td>
-                                            <td>
-                                                {student.isActive
-                                                    ? "Active"
-                                                    : "Inactive"}
-                                            </td>
-                                            <td>
-                                                <button
-                                                    className="danger-button"
-                                                    onClick={() =>
-                                                        admin.handleDeleteStudent(student)
-                                                    }
-                                                >
-                                                    Delete
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                    <Message
+                        messages={admin.messages}
+                        name="dashboard"
+                    />
 
-                    <Message messages={admin.messages} name="students" />
-                </section>
+                    {renderPage()}
 
-                {/* STUDENT ANSWER REVIEW */}
-                <section className="import-card">
-                    <h3>Student Answer Review Permission</h3>
-
-                    <p>
-                        Allow students to view their correct answers after completing the quiz.
-                    </p>
-
-                    <p>
-                        Current Status:{" "}
-                        <strong
-                            className={
-                                admin.reviewEnabled
-                                    ? "status-enabled"
-                                    : "status-disabled"
-                            }
-                        >
-                            {admin.reviewEnabled ? "Enabled" : "Disabled"}
-                        </strong>
-                    </p>
-
-                    <button
-                        onClick={admin.handleToggleReview}
-                        disabled={admin.loading.review}
-                    >
-                        {admin.loading.review
-                            ? "Updating..."
-                            : admin.reviewEnabled
-                                ? "Disable Student Review"
-                                : "Enable Student Review"}
-                    </button>
-
-                    <Message messages={admin.messages} name="review" />
-                </section>
-
-                {/* STUDENT RESULTS */}
-                <section className="import-card">
-                    <div className="section-heading">
-                        <h3>Student Quiz Results</h3>
-
-                        <button
-                            onClick={admin.refreshResults}
-                            disabled={admin.loading.results}
-                        >
-                            {admin.loading.results
-                                ? "Loading..."
-                                : "Refresh Results"}
-                        </button>
-                    </div>
-
-                    <button
-                        className="danger-button"
-                        onClick={admin.handleDeleteAllResults}
-                        disabled={admin.loading.deleteResults}
-                    >
-                        {admin.loading.deleteResults
-                            ? "Deleting..."
-                            : "Delete All Results"}
-                    </button>
-
-                    <div className="table-container">
-                        <table className="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>S.No</th>
-                                    <th>Roll Number</th>
-                                    <th>Score</th>
-                                    <th>Total</th>
-                                    <th>Percentage</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {admin.results.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="6">
-                                            No student results available.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    admin.results.map((result, index) => (
-                                        <tr key={result._id || index}>
-                                            <td>{index + 1}</td>
-                                            <td>
-                                                {result.rollNumber || result.studentName}
-                                            </td>
-                                            <td>{result.score}</td>
-                                            <td>{result.total}</td>
-                                            <td>{result.percentage}%</td>
-                                            <td>
-                                                {result.createdAt
-                                                    ? new Date(
-                                                        result.createdAt
-                                                    ).toLocaleString()
-                                                    : "-"}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <Message messages={admin.messages} name="results" />
-                </section>
+                </div>
             </main>
 
             {/* CONFIRMATION MODAL */}

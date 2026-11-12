@@ -12,8 +12,9 @@ export default defineConfig({
 
         proxy: {
             "/api": {
-                target: "my-quiz-server.onrender.com",
-                changeOrigin: true
+                target: "https://my-quiz-system.onrender.com",
+                changeOrigin: true,
+                secure: true
             }
         }
     }
