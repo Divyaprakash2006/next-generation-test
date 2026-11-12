@@ -143,15 +143,15 @@ async function fetchTestTitle() {
 }
 
 function restoreQuizTitle() {
-    const title = localStorage.getItem("quizTitle") ||
-        "Welcome to Online Assessment";
+    // const title = localStorage.getItem("quizTitle") ||
+    //     "Welcome to Online Assessment";
 
-    const displayTitle = getElement("displayQuizTitle");
-    const quizHeading = getElement("quizHeading");
+    // const displayTitle = getElement("displayQuizTitle");
+    // const quizHeading = getElement("quizHeading");
     const titleElement = getElement("testTitle");
 
-    if (displayTitle) displayTitle.textContent = title;
-    if (quizHeading) quizHeading.textContent = title;
+    // if (displayTitle) displayTitle.textContent = title;
+    // if (quizHeading) quizHeading.textContent = title;
 
     if (titleElement && !titleElement.textContent.trim()) {
         titleElement.textContent = title;
