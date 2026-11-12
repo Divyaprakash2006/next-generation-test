@@ -53,9 +53,9 @@ function App() {
         <div className="admin-page">
             <header className="admin-header">
                 <a href="/" className="logo-link">
-                    <img src="/logo.svg" alt="Quiz Logo" className="logo" />
+                    <img src="logo.svg" alt="Quiz Logo" className="logo" />
                 </a>
-                <a href="/" className="student-link">Student Quiz</a>
+                <a href="/" className="student-link">Student Portal</a>
             </header>
 
             <main className="admin-container">

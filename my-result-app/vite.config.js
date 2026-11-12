@@ -9,8 +9,12 @@ export default defineConfig({
 
     server: {
         port: 5173,
+
         proxy: {
-            "/api": "my-quiz-system.onrender.com"
+            "/api": {
+                target: "my-quiz-server.onrender.com",
+                changeOrigin: true
+            }
         }
     }
 });

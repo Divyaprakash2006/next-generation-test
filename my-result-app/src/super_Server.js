@@ -348,9 +348,7 @@ export function useAdminDashboard() {
 
     const [loginPassword, setLoginPassword] = useState("");
 
-    const [quizTitle, setQuizTitle] = useState(
-        localStorage.getItem("quizTitle") || "Online Quiz"
-    );
+   
 
     const [questionFile, setQuestionFile] = useState(null);
 
@@ -369,7 +367,7 @@ export function useAdminDashboard() {
     const [imagePasteMessage, setImagePasteMessage] = useState("");
 
     const [messages, setMessages] = useState({});
-
+    const [quizTitle, setQuizTitle] = useState("Online Quiz");
     const [loading, setLoading] = useState({
         login: false,
         txt: false,
@@ -603,7 +601,8 @@ async function handleAdminLogin(event) {
             refreshStudents(),
             refreshResults(),
             refreshQuestionCount(),
-            refreshReviewSetting()
+            refreshReviewSetting(),
+            fetchQuizTitle()
         ]);
 
     }
@@ -755,35 +754,89 @@ async function handleAdminLogin(event) {
     }
 
 
-    // ========================================
-    // 14. SAVE QUIZ TITLE
-    // ========================================
+// ========================================
+// 14. QUIZ TITLE SETTINGS
+// ========================================
 
-    function saveQuizTitle() {
+// Fetch saved quiz title from MongoDB
 
-        if (!quizTitle.trim()) {
+async function fetchQuizTitle() {
 
-            showMessage(
-                "title",
-                "Enter a quiz title.",
-                true
-            );
+    try {
 
-            return;
-        }
-
-        localStorage.setItem(
-            "quizTitle",
-            quizTitle.trim()
+        const data = await apiRequest(
+            "/api/admin/test-title"
         );
+
+        setQuizTitle(
+            data.testTitle || "Online Quiz"
+        );
+
+    } catch (error) {
 
         showMessage(
             "title",
-            "Quiz title saved successfully."
+            error.message,
+            true
         );
 
     }
 
+}
+
+
+// Save quiz title to MongoDB
+
+async function saveQuizTitle() {
+
+    if (!quizTitle.trim()) {
+
+        showMessage(
+            "title",
+            "Please enter a quiz title.",
+            true
+        );
+
+        return;
+    }
+
+    try {
+
+        const data = await apiRequest(
+            "/api/admin/test-title",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    testTitle: quizTitle.trim()
+                })
+            }
+        );
+
+        setQuizTitle(
+            data.testTitle || quizTitle.trim()
+        );
+
+        showMessage(
+            "title",
+            data.message || "Quiz title saved successfully."
+        );
+
+    } catch (error) {
+
+        showMessage(
+            "title",
+            error.message,
+            true
+        );
+
+    }
+
+}
 
     // ========================================
     // 15. IMPORT QUESTIONS FROM TXT

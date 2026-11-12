@@ -10,7 +10,7 @@ body {
     margin: 0;
     padding: 0;
     font-family: Arial, sans-serif;
-    background: #f3f6fb;
+    background: lightblue;
     color: #222;
 }
 
@@ -77,11 +77,11 @@ p {
     width: 100%;
     min-height: 70px;
     padding: 12px 5%;
-    background: white;
+    background: aliceblue;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    
 }
 
 .logo-link {
@@ -406,4 +406,14 @@ p {
         margin: 45px auto;
         padding: 22px;
     }
+}
+
+
+/* Remove all border-radius from Admin page */
+
+#root,
+#root *,
+#root *::before,
+#root *::after {
+    border-radius: 0 !important;
 }

@@ -189,6 +189,10 @@ const settingSchema = new mongoose.Schema({
     reviewEnabled: {
         type: Boolean,
         default: false
+    },
+    testTitle: {
+        type: String,
+        default: "Online Examination"
     }
 });
 
@@ -388,6 +392,111 @@ app.post(
 
     }
 );
+
+
+
+/* =========================================
+   TEST TITLE APIs
+========================================= */
+
+// 1. STUDENT: GET TEST TITLE
+
+app.get("/api/quiz/test-title", async (req, res) => {
+    try {
+        let setting = await Setting.findOne();
+
+        if (!setting) {
+            setting = await Setting.create({
+                testTitle: "Online Examination"
+            });
+        }
+
+        res.json({
+            testTitle: setting.testTitle || "Online Examination"
+        });
+
+    } catch (error) {
+        console.error("Student test title error:", error);
+
+        res.status(500).json({
+            message: "Unable to fetch test title"
+        });
+    }
+});
+
+
+// 2. ADMIN: GET SAVED TEST TITLE
+
+app.get("/api/admin/test-title", checkAdmin, async (req, res) => {
+    try {
+        let setting = await Setting.findOne();
+
+        if (!setting) {
+            setting = await Setting.create({
+                testTitle: "Online Examination"
+            });
+        }
+
+        res.json({
+            testTitle: setting.testTitle || "Online Examination"
+        });
+
+    } catch (error) {
+        console.error("Admin test title error:", error);
+
+        res.status(500).json({
+            message: "Unable to fetch test title"
+        });
+    }
+});
+
+
+// 3. ADMIN: SAVE OR UPDATE TEST TITLE
+
+app.post("/api/admin/test-title", checkAdmin, async (req, res) => {
+    try {
+        const testTitle = req.body.testTitle;
+
+        if (!testTitle || !testTitle.trim()) {
+            return res.status(400).json({
+                message: "Test title is required"
+            });
+        }
+
+        if (testTitle.trim().length > 150) {
+            return res.status(400).json({
+                message: "Test title cannot exceed 150 characters"
+            });
+        }
+
+        const setting = await Setting.findOneAndUpdate(
+            {},
+            {
+                $set: {
+                    testTitle: testTitle.trim()
+                }
+            },
+            {
+                new: true,
+                upsert: true,
+                runValidators: true,
+                setDefaultsOnInsert: true
+            }
+        );
+
+        res.json({
+            message: "Test title saved successfully",
+            testTitle: setting.testTitle
+        });
+
+    } catch (error) {
+        console.error("Save test title error:", error);
+
+        res.status(500).json({
+            message: "Unable to save test title"
+        });
+    }
+});
 
 
 /* =========================================
