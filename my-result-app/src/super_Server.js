@@ -1110,244 +1110,195 @@ async function saveQuizTitle() {
     // 19. ADD STUDENT
     // ========================================
 
-    async function handleAddStudent(event) {
+   
+async function handleAddStudent(event) {
+    event.preventDefault();
 
-        event.preventDefault();
+    const form = event.currentTarget;
 
-        const form = event.currentTarget;
+    const rollNumber = form.elements.rollNumber.value.trim();
+    const email = form.elements.email.value.trim().toLowerCase();
+    const password = form.elements.studentPassword.value;
 
-        const rollNumber =
-            form.elements.rollNumber.value.trim();
-
-        const password =
-            form.elements.studentPassword.value;
-
-        if (!rollNumber || !password) {
-
-            showMessage(
-                "addStudent",
-                "Enter roll number and password.",
-                true
-            );
-
-            return;
-        }
-
-        setLoadingValue("addStudent", true);
-
-        try {
-
-            const data = await apiRequest(
-                "/api/admin/students",
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        rollNumber,
-                        password
-                    })
-                }
-            );
-
-            showMessage(
-                "addStudent",
-                data.message ||
-                "Student added successfully."
-            );
-
-            form.reset();
-
-            await refreshStudents();
-
-        } catch (error) {
-
-            showMessage(
-                "addStudent",
-                error.message,
-                true
-            );
-
-        } finally {
-
-            setLoadingValue(
-                "addStudent",
-                false
-            );
-
-        }
+    if (!rollNumber || !email || !password) {
+        showMessage(
+            "addStudent",
+            "Enter roll number, email and password.",
+            true
+        );
+        return;
     }
+
+    setLoadingValue("addStudent", true);
+
+    try {
+        const data = await apiRequest(
+            "/api/admin/students",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    rollNumber,
+                    email,
+                    password
+                })
+            }
+        );
+
+        showMessage(
+            "addStudent",
+            data.message || "Student added successfully."
+        );
+
+        form.reset();
+
+        await refreshStudents();
+
+    } catch (error) {
+        showMessage(
+            "addStudent",
+            error.message,
+            true
+        );
+    } finally {
+        setLoadingValue("addStudent", false);
+    }
+}
 
 
     // ========================================
     // 20. DOWNLOAD STUDENT CSV TEMPLATE
     // ========================================
 
-    function downloadStudentCSVTemplate() {
+    
+function downloadStudentCSVTemplate() {
+    const csv =
+        "Roll Number,Email,Password\n" +
+        "23CB001,student1@gmail.com,student123\n" +
+        "23CB002,student2@gmail.com,student123\n";
 
-        const csv =
-            "Roll Number,Password\n" +
-            "23CB001,student123\n" +
-            "23CB002,student123\n";
+    const blob = new Blob(
+        [csv],
+        { type: "text/csv" }
+    );
 
-        const blob = new Blob(
-            [csv],
-            { type: "text/csv" }
-        );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
 
-        const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = "students-template.csv";
 
-        const link = document.createElement("a");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-        link.href = url;
-
-        link.download = "students-template.csv";
-
-        document.body.appendChild(link);
-
-        link.click();
-
-        document.body.removeChild(link);
-
-        URL.revokeObjectURL(url);
-
-    }
+    URL.revokeObjectURL(url);
+}
 
 
     // ========================================
     // 21. IMPORT STUDENTS CSV
     // ========================================
 
-    async function handleCSVImport() {
-
-        if (!studentCSVFile) {
-
-            showMessage(
-                "csv",
-                "Please select a CSV file.",
-                true
-            );
-
-            return;
-        }
-
-        setLoadingValue("csv", true);
-
-        try {
-
-            const csvText = await studentCSVFile.text();
-
-            const lines = csvText
-                .trim()
-                .split(/\r?\n/);
-
-            if (lines.length < 2) {
-
-                throw new Error(
-                    "CSV file contains no student records."
-                );
-
-            }
-
-            const headers = lines[0]
-                .split(",")
-                .map(value => value.trim().toLowerCase());
-
-            const rollIndex = headers.findIndex(value =>
-                value === "roll number" ||
-                value === "rollnumber"
-            );
-
-            const passwordIndex = headers.findIndex(value =>
-                value === "password"
-            );
-
-            if (
-                rollIndex === -1 ||
-                passwordIndex === -1
-            ) {
-
-                throw new Error(
-                    "CSV must contain Roll Number and Password columns."
-                );
-
-            }
-
-            const studentsToImport = [];
-
-            for (let i = 1; i < lines.length; i++) {
-
-                if (!lines[i].trim()) continue;
-
-                const values = lines[i].split(",");
-
-                const rollNumber =
-                    values[rollIndex]?.trim();
-
-                const password =
-                    values[passwordIndex]?.trim();
-
-                if (rollNumber && password) {
-
-                    studentsToImport.push({
-                        rollNumber,
-                        password
-                    });
-
-                }
-            }
-
-            if (studentsToImport.length === 0) {
-
-                throw new Error(
-                    "No valid student records found."
-                );
-
-            }
-
-            const data = await apiRequest(
-                "/api/admin/import-students",
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        students: studentsToImport
-                    })
-                }
-            );
-
-            showMessage(
-                "csv",
-                data.message ||
-                studentsToImport.length +
-                " students imported."
-            );
-
-            setStudentCSVFile(null);
-
-            await refreshStudents();
-
-        } catch (error) {
-
-            showMessage(
-                "csv",
-                error.message,
-                true
-            );
-
-        } finally {
-
-            setLoadingValue("csv", false);
-
-        }
+  
+async function handleCSVImport() {
+    if (!studentCSVFile) {
+        showMessage("csv", "Please select a CSV file.", true);
+        return;
     }
+
+    setLoadingValue("csv", true);
+
+    try {
+        const csvText = await studentCSVFile.text();
+
+        const lines = csvText.trim().split(/\r?\n/);
+
+        if (lines.length < 2) {
+            throw new Error("CSV file contains no student records.");
+        }
+
+        const headers = lines[0]
+            .split(",")
+            .map(value => value.trim().toLowerCase());
+
+        const rollIndex = headers.findIndex(value =>
+            value === "roll number" || value === "rollnumber"
+        );
+
+        const emailIndex = headers.findIndex(value =>
+            value === "email" || value === "email address"
+        );
+
+        const passwordIndex = headers.findIndex(value =>
+            value === "password"
+        );
+
+        if (
+            rollIndex === -1 ||
+            emailIndex === -1 ||
+            passwordIndex === -1
+        ) {
+            throw new Error(
+                "CSV must contain Roll Number, Email and Password columns."
+            );
+        }
+
+        const studentsToImport = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+
+            const values = lines[i].split(",");
+
+            const rollNumber = values[rollIndex]?.trim();
+            const email = values[emailIndex]?.trim().toLowerCase();
+            const password = values[passwordIndex]?.trim();
+
+            if (rollNumber && email && password) {
+                studentsToImport.push({
+                    rollNumber,
+                    email,
+                    password
+                });
+            }
+        }
+
+        if (studentsToImport.length === 0) {
+            throw new Error("No valid student records found.");
+        }
+
+        const data = await apiRequest(
+            "/api/admin/import-students",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    students: studentsToImport
+                })
+            }
+        );
+
+        showMessage(
+            "csv",
+            data.message || studentsToImport.length + " students imported."
+        );
+
+        setStudentCSVFile(null);
+
+        await refreshStudents();
+
+    } catch (error) {
+        showMessage("csv", error.message, true);
+    } finally {
+        setLoadingValue("csv", false);
+    }
+}
+
 
 
     // ========================================

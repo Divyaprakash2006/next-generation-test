@@ -254,6 +254,12 @@ function App() {
                                     name="rollNumber"
                                     placeholder="Enter student roll number"
                                 />
+                                <input
+                                       type="email"
+                                        name="email"
+                                         placeholder="Enter student email address"
+                                          required
+                               />
 
                                 <input
                                     type="password"
@@ -281,7 +287,7 @@ function App() {
                             <h3>Import Students from CSV</h3>
 
                             <p>
-                                Required columns: Roll Number and Password.
+                               Required columns: Roll Number, Email and Password.
                             </p>
 
                             <button
