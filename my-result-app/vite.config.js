@@ -12,7 +12,7 @@ export default defineConfig({
 
         proxy: {
             "/api": {
-                target: "https://my-quiz-system.onrender.com",
+                target: "http://localhost:3001",
                 changeOrigin: true,
                 secure: true
             }

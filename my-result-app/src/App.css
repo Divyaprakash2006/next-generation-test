@@ -705,3 +705,50 @@ p {
         display: none;
     }
 }
+
+
+/* Results heading and buttons */
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    margin-bottom: 35px;
+}
+
+.results-header h2 {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.results-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 15px;
+}
+
+.results-header-actions button {
+    white-space: nowrap;
+    min-width: 150px;
+}
+
+.results-delete {
+    margin-bottom: 28px;
+}
+
+/* Responsive layout */
+@media (max-width: 768px) {
+    .results-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .results-header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+}
+

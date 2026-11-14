@@ -151,6 +151,19 @@ const resultSchema = new mongoose.Schema({
     lowercase: true,
     default: "",
   },
+  emailStatus: {
+    type: String,
+    enum: ["pending", "sending", "sent", "failed"],
+    default: "pending"
+},
+emailSentAt: {
+    type: Date,
+    default: null
+},
+emailError: {
+    type: String,
+    default: ""
+ },
 
   score: {
     type: Number,
@@ -1126,6 +1139,7 @@ app.post("/api/quiz/results", checkStudent, async function (req, res) {
     }
 
     const result = await Result.create({
+      emailStatus: "pending",
       rollNumber: rollNumber,
       studentName: rollNumber,
       email: student.email,
@@ -1137,20 +1151,7 @@ app.post("/api/quiz/results", checkStudent, async function (req, res) {
 
     // Attempt to send the email before responding.
     // Email failure will not undo the saved quiz result.
-    try {
-      await sendQuizResult(
-        student.email,
-        result.studentName,
-        result.rollNumber,
-        result.score,
-        result.total,
-        result.percentage,
-      );
 
-      console.log("Student result email sent to:", student.email);
-    } catch (emailError) {
-      console.log("Email sending failed:", emailError.message);
-    }
 
     res.status(201).json({
       success: true,
@@ -1171,6 +1172,142 @@ app.post("/api/quiz/results", checkStudent, async function (req, res) {
   }
 });
 
+
+app.post("/api/admin/results/:id/send-email", checkAdmin, async (req, res) => {
+    try {
+        const result = await Result.findById(req.params.id);
+
+        if (!result) {
+            return res.status(404).json({
+                success: false,
+                message: "Result not found"
+            });
+        }
+
+        if (!result.email || !result.email.includes("@")) {
+            return res.status(400).json({
+                success: false,
+                message: "Student email not found"
+            });
+        }
+
+        if (result.emailStatus === "sent") {
+            return res.status(400).json({
+                success: false,
+                message: "Email already sent"
+            });
+        }
+
+        if (result.emailStatus === "sending") {
+            return res.status(409).json({
+                success: false,
+                message: "Email is already sending"
+            });
+        }
+
+        result.emailStatus = "sending";
+        await result.save();
+
+        try {
+            await sendQuizResult(
+                result.email,
+                result.studentName,
+                result.rollNumber,
+                result.score,
+                result.total,
+                result.percentage
+            );
+
+            result.emailStatus = "sent";
+            result.emailSentAt = new Date();
+            result.emailError = "";
+            await result.save();
+
+            res.json({
+                success: true,
+                message: "Email sent successfully"
+            });
+
+        } catch (error) {
+            result.emailStatus = "failed";
+            result.emailError = error.message;
+            await result.save();
+
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+
+app.post("/api/admin/results/send-all-emails", checkAdmin, async (req, res) => {
+    try {
+        const results = await Result.find({
+            emailStatus: { $nin: ["sent", "sending"] }
+        });
+
+        let sent = 0;
+        let failed = 0;
+        let skipped = 0;
+
+        for (const result of results) {
+            if (!result.email || !result.email.includes("@")) {
+                skipped++;
+                continue;
+            }
+
+            result.emailStatus = "sending";
+            await result.save();
+
+            try {
+                await sendQuizResult(
+                    result.email,
+                    result.studentName,
+                    result.rollNumber,
+                    result.score,
+                    result.total,
+                    result.percentage
+                );
+
+                result.emailStatus = "sent";
+                result.emailSentAt = new Date();
+                result.emailError = "";
+                await result.save();
+
+                sent++;
+
+            } catch (error) {
+                result.emailStatus = "failed";
+                result.emailError = error.message;
+                await result.save();
+
+                failed++;
+            }
+        }
+
+        res.json({
+            success: true,
+            sent,
+            failed,
+            skipped,
+            totalProcessed: results.length
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
 /* =========================================
    19. ADMIN: GET STUDENT RESULTS
 ========================================= */

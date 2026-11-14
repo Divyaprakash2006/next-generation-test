@@ -37,7 +37,8 @@ function App() {
     { id: "questions", label: "Question Management", icon: ClipboardList },
     { id: "students", label: "Students", icon: Users },
     { id: "review", label: "Review Permission", icon: ShieldCheck },
-    { id: "results", label: "Student Results", icon: ChartColumn }
+    { id: "results", label: "Student Results", icon: ChartColumn },
+    {id:  "logout", label: "Logout", icon: LogOut}
 ];
 
     function renderPage() {
@@ -48,7 +49,7 @@ function App() {
                 return (
                     <>
                         <h2>Dashboard</h2>
-                        <p>Welcome Admin. Manage your quiz system.</p>
+                        <p>Welcome Admin. Manage your assessment system.</p>
 
                         <div className="dashboard-cards">
                             <div className="dashboard-card">
@@ -424,18 +425,28 @@ function App() {
             case "results":
                 return (
                     <section className="import-card">
-                        <div className="section-heading">
-                            <h2>Student Quiz Results</h2>
+                       
+<div className="results-header">
+    <h2>Student Assessment Results</h2>
 
-                            <button
-                                onClick={admin.refreshResults}
-                                disabled={admin.loading.results}
-                            >
-                                Refresh Results
-                            </button>
-                        </div>
+    <div className="results-header-actions">
+        <button onClick={admin.refreshResults}>
+            Refresh Results
+        </button>
 
-                        <button
+        <button
+            onClick={admin.handleSendAllResultEmails}
+            disabled={admin.loading.sendAllEmails}
+        >
+            {admin.loading.sendAllEmails
+                ? "Sending..."
+                : "Send All Result Emails"}
+        </button>
+    </div>
+</div>
+
+<div className="results-delete">
+     <button
                             className="danger-button"
                             onClick={admin.handleDeleteAllResults}
                             disabled={admin.loading.deleteResults}
@@ -444,6 +455,10 @@ function App() {
                                 ? "Deleting..."
                                 : "Delete All Results"}
                         </button>
+</div>
+
+
+                       
 
                         <div className="table-container">
                             <table className="admin-table">
@@ -455,36 +470,63 @@ function App() {
                                         <th>Total</th>
                                         <th>Percentage</th>
                                         <th>Date</th>
+                                        <th>Email Status</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
                                     {admin.results.length === 0 ? (
                                         <tr>
-                                            <td colSpan="6">
-                                                No student results available.
-                                            </td>
+                                            <td colSpan="8">
+                                               No student results available.
+                                             </td>
                                         </tr>
                                     ) : (
-                                        admin.results.map((result, index) => (
-                                            <tr key={result._id || index}>
-                                                <td>{index + 1}</td>
-                                                <td>
-                                                    {result.rollNumber ||
-                                                        result.studentName}
-                                                </td>
-                                                <td>{result.score}</td>
-                                                <td>{result.total}</td>
-                                                <td>{result.percentage}%</td>
-                                                <td>
-                                                    {result.createdAt
-                                                        ? new Date(
-                                                            result.createdAt
-                                                        ).toLocaleString()
-                                                        : "-"}
-                                                </td>
-                                            </tr>
-                                        ))
+                                                                 
+admin.results.map((result, index) => (
+    <tr key={result._id || index}>
+        <td>{index + 1}</td>
+
+        <td>
+            {result.rollNumber || result.studentName}
+        </td>
+
+        <td>{result.score}</td>
+        <td>{result.total}</td>
+        <td>{result.percentage}%</td>
+
+        {/* Date */}
+        <td>
+            {result.createdAt
+                ? new Date(result.createdAt).toLocaleString()
+                : "-"}
+        </td>
+
+        {/* Email Status */}
+        <td>
+            {result.emailStatus || "Pending"}
+        </td>
+
+        {/* Action */}
+        <td>
+            <button
+                onClick={() => admin.handleSendResultEmail(result)}
+                disabled={
+                    admin.loading.sendingResultId === result._id ||
+                    result.emailStatus === "sent"
+                }
+            >
+                {admin.loading.sendingResultId === result._id
+                    ? "Sending..."
+                    : result.emailStatus === "sent"
+                        ? "Sent"
+                        : "Send Email"}
+                </button>
+          </td>
+       </tr>
+    ))
+
                                     )}
                                 </tbody>
                             </table>
@@ -581,6 +623,7 @@ function App() {
                         onClick={admin.handleLogout}
                     >
                         <span></span>
+                         <LogOut size={20} />
                         Logout
                     </button>
                 </div>
@@ -596,7 +639,7 @@ function App() {
                                 item => item.id === activePage
                             )?.label}
                         </h3>
-                        <p>Quiz Management System</p>
+                        <p>Test Management System</p>
                     </div>
 
                     <span className="admin-profile">

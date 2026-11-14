@@ -378,7 +378,9 @@ export function useAdminDashboard() {
         review: false,
         addStudent: false,
         deleteQuestions: false,
-        deleteResults: false
+        deleteResults: false,
+        sendAllEmails: false,
+        sendingResultId: null,
     });
 
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -687,6 +689,112 @@ async function handleAdminLogin(event) {
 
         }
     }
+
+    // ========================================
+// SEND EMAIL TO ONE STUDENT
+// ========================================
+
+async function handleSendResultEmail(result) {
+
+    openConfirm(
+        "Send quiz result email to " +
+        (result.rollNumber || result.studentName) + "?",
+
+        async function () {
+
+            setLoading(previous => ({
+                ...previous,
+                sendingResultId: result._id
+            }));
+
+            try {
+
+                const data = await apiRequest(
+                    "/api/admin/results/" + result._id + "/send-email",
+                    {
+                        method: "POST"
+                    }
+                );
+
+                showMessage(
+                    "results",
+                    data.message || "Email sent successfully."
+                );
+
+                await refreshResults();
+
+            } catch (error) {
+
+                showMessage(
+                    "results",
+                    error.message,
+                    true
+                );
+
+                await refreshResults();
+
+            } finally {
+
+                setLoading(previous => ({
+                    ...previous,
+                    sendingResultId: null
+                }));
+
+            }
+        }
+    );
+}
+
+// ========================================
+// SEND EMAIL TO ALL STUDENTS
+// ========================================
+
+function handleSendAllResultEmails() {
+
+    openConfirm(
+        "Are you sure you want to send result emails to all eligible students?",
+
+        async function () {
+
+            setLoadingValue("sendAllEmails", true);
+
+            try {
+
+                const data = await apiRequest(
+                    "/api/admin/results/send-all-emails",
+                    {
+                        method: "POST"
+                    }
+                );
+
+                showMessage(
+                    "results",
+                    "Email process completed. Sent: " +
+                    data.sent +
+                    ", Failed: " +
+                    data.failed +
+                    ", Skipped: " +
+                    data.skipped
+                );
+
+                await refreshResults();
+
+            } catch (error) {
+
+                showMessage(
+                    "results",
+                    error.message,
+                    true
+                );
+
+            } finally {
+
+                setLoadingValue("sendAllEmails", false);
+
+            }
+        }
+    );
+}
 
 
     // ========================================
@@ -1547,6 +1655,10 @@ async function handleCSVImport() {
         refreshResults,
         handleDeleteAllResults,
 
+
+        handleSendResultEmail,
+        handleSendAllResultEmails,
+        
         confirmYes,
         confirmNo
 
